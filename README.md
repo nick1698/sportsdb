@@ -13,3 +13,9 @@ A monorepo for a sports platform with:
 ### Run (placeholder)
 > The stack/services will be added in the next steps.
 For now, this repo only contains the initial skeleton.
+
+## Repository layout
+- `server/` backend services
+- `web/` frontend app(s)
+- `infra/` infrastructure (Docker, env, deploy)
+- `docs/` documentation
