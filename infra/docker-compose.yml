@@ -17,5 +17,16 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build:
+      context: ../server
+    container_name: sportsdb-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
 volumes:
   db_data:
