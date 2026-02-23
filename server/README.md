@@ -6,43 +6,43 @@ FastAPI backend for the SportsDB monorepo.
 
 ### Requirements
 
-- Python 3.12+
-- (Optional but recommended) a virtual environment tool: `venv`, `uv`, or `poetry`
+- Python 3.12.12
+- (Optional but recommended) a virtual environment tool
 
-### Setup with `venv` + `requirements.txt`
-
-From the repo root:
+### Setup with `pyenv` + `requirements.txt`
 
 ```bash
-cd server
-python -m venv .venv
-source .venv/bin/activate
+# inside the /server directory
+pyenv install 3.12.12
+pyenv virtualenv 3.12.12 [venv name]
 pip install -r requirements.txt
+# this will be launched as a docker compose cmd
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-API:
+### API - Local
 
 - Health: `GET http://127.0.0.1:8000/health`
+- DB check: `GET http://127.0.0.1:8000/db-check`
 
 ## Run via Docker Compose
 
-From `infra/`:
-
 ```bash
+# inside the /infra directory
 docker compose up -d --build
 ```
 
-API:
+### API - Docker
 
 - Health: `GET http://localhost:8000/health`
+- DB check: `GET http://localhost:8000/db-check`
 
-## Configuration (env vars)
+## Configuration: environment variables
 
-The server reads configuration from environment variables:
+The server reads configuration from env vars:
 
+- `DATABASE_URL` (required for DB features)
 - `LOG_LEVEL` (default: `INFO`)
-- `DATABASE_URL` (optional for now; used later for DB integration)
 
 When running via Docker Compose, `DATABASE_URL` is provided by `infra/docker-compose.yml`.
 
@@ -50,7 +50,7 @@ When running via Docker Compose, `DATABASE_URL` is provided by `infra/docker-com
 
 ```bash
 export LOG_LEVEL=DEBUG
-export DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/sportsdb"
+export DATABASE_URL="postgresql+psycopg://[user]:[pw]@127.0.0.1:5432/sportsdb"
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
