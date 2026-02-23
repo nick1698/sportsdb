@@ -4,9 +4,9 @@ services:
     container_name: sportsdb-db
     restart: unless-stopped
     environment:
-      PG_DB: ${PG_DB:-sportsdb}
-      PG_USER: ${PG_USER:-sportsdb}
-      PG_PASSWORD: ${PG_PW:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-sportsdb}
+      POSTGRES_USER: ${POSTGRES_USER:-sportsdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     ports:
       - "${PG_PORT:-5432}:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
     healthcheck:
       # pg_isready = Postgres tool which checks whether the db server is already accepting connections
       # :- = [if the envvar is known, use it; otherwise use the default on the right]
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-sportsdb} -d ${PG_DB:-sportsdb}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sportsdb} -d ${POSTGRES_DB:-sportsdb}"]
       # start_period: 20s
       interval: 5s
       timeout: 3s
@@ -31,7 +31,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+psycopg://${PG_USER:-sportsdb}:${PG_PW:-change-me}@db:5432/${PG_DB:-sportsdb}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sportsdb}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-sportsdb}
 
 volumes:
   db_data:
