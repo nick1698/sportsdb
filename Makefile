@@ -94,6 +94,18 @@ alembic: ## Run an alembic command in api (standard). Example: make alembic ARGS
 alembic-dev: ## Run an alembic command in api (dev). Example: make alembic-dev ARGS="revision --autogenerate -m 'msg'"
 	$(COMPOSE_DEV) exec api alembic $${ARGS:?Set ARGS, e.g. ARGS="upgrade head"}
 
+.PHONY: mig
+mig: ## Create an autogenerate migration (standard). Usage: make mig MSG=add_users_table
+	$(COMPOSE_BASE) exec api alembic revision --autogenerate -m $${MSG:?Set MSG, e.g. MSG=add_users_table}
+
+.PHONY: mig-dev
+mig-dev: ## Create an autogenerate migration (dev). Usage: make mig-dev MSG=add_users_table
+	$(COMPOSE_DEV) exec api alembic revision --autogenerate -m $${MSG:?Set MSG, e.g. MSG=add_users_table}
+
+.PHONY: upg-dev
+upg-dev: ## Alembic upgrade head (dev)
+	$(COMPOSE_DEV) exec api alembic upgrade head
+
 # --- Quality of life ---------------------------------------------------------
 
 .PHONY: config
