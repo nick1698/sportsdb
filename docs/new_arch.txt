@@ -1,0 +1,208 @@
+# Memo conversazione (architettura webapp multi-sport) — da riusare in nuova chat
+
+## Contesto / Obiettivo
+- Webapp B2C (a lungo termine), **inizio = uso personale (solo Nick)**.
+- Piattaforma che aggrega dati/info su molti sport **solo consultazione**.
+- Feature desiderate:
+  - MVP: **pagine profilo**, **filtri/facet**, **ricerca testuale** (per-sport).
+  - Più avanti: classifiche, risultati, calendari, statistiche avanzate.
+  - Personalizzazione (preferiti/dashboard) **trasversale** ai singoli sport (futuro).
+- Dati:
+  - Inizio: inserimento manuale.
+  - Poi: scraping / API terze / ingest automatizzato.
+
+## Visione “platform + sport modules”
+- Concetto: “core platform” agnostica + moduli per sport.
+- Nick inizialmente voleva **UI + DB separati per sport** per isolamento e comodità mentale.
+- Decisione intermedia: per MVP scegliere **app unica** ma con **DB separati per sport** (su stessa istanza Postgres) per tenere strada aperta a separare in futuro (per-sport deploy) se serve.
+- Isolamento fault:
+  - DB separati aiutano.
+  - In futuro i task pesanti (scraping/ETL) dovranno girare su worker separati per ridurre “shared fate”.
+
+## Stack / Repo / Tooling
+- Frontend: **React + TypeScript**.
+- Framework FE: **Next.js subito** (anche se Nick non l’ha mai usato), inizialmente “SPA-like”, SSR/SSG non prioritario ma desiderabile quando scala.
+- Backend: **Django** (API via DRF).
+- Repo: **monorepo** (frontend + backend nello stesso repo).
+- DB: Postgres con:
+  - **DB core** separato (utenti/preferenze + entità cross-sport).
+  - **DB separati per sport** (football_db, volley_db, …).
+
+## Admin / Backoffice
+- Non usare Django Admin come UX quotidiana (lo trova complesso), ma:
+  - Costruire **UI di gestione dentro la UI principale** (per-sport), visibile solo ad admin/superadmin.
+  - Django Admin resta come **leva di emergenza**.
+- L’admin non è “un pannello separato”, è: stesse pagine + edit/create/delete per admin (“edit mode”).
+
+## Subdomain / Routing / Deployment
+- Nick vuole **subdomain per sport**: `calcio.miosito.com`, `volley.miosito.com`.
+- Login unico cross-subdomain richiesto (futuro): utente si registra sulla piattaforma, dashboard con sport seguiti.
+- Hub suggerito: **B)** subdomain generico tipo `app.miosito.com` per:
+  - login, area personale, dashboard inter-sport, preferenze.
+  - Poi rimanda ai subdomain sport per i dettagli.
+- Importante pattern per evitare CORS/cookie pain:
+  - **API same-origin per ogni subdomain**: `calcio.miosito.com/api -> (reverse proxy) -> Django` e uguale per volley.
+  - Session cookie condiviso con `Domain=.miosito.com`, Secure, HttpOnly, SameSite=Lax (di default).
+- Frontend deployment: iniziare con **UNA sola app Next** che serve hub + sport subdomain (host-based routing).
+  - Tenere confini modulari per poter “estrarre” uno sport in deploy separato in futuro.
+
+## Auth: cookie session vs JWT
+- Scelta iniziale: **sessioni Django con cookie** (più semplice per web + subdomain).
+- JWT/OAuth2 solo se/when serve (mobile/3rd-party APIs). Più complesso ≠ più sicuro.
+- Futuro: possibile avere entrambi:
+  - cookie session per web
+  - OAuth2/tokens per mobile/partner
+
+## Ricerca / SEO
+- Ricerca nel breve: **solo per-sport**, non cross-sport.
+- SEO non fondamentale all’inizio; desiderabile quando scala.
+- Next.js scelto per aprire la strada a SSR/SSG in futuro.
+
+## Modellazione dati: approccio ibrido
+- Scelta: **ibrido** (core trasversale + sport-specific nei DB sport).
+- Entità core trasversali discusse:
+  - Country (ok)
+  - Person (ok) con cittadinanze/nazionalità potenzialmente multiple e nel tempo
+  - Club/Organization trasversale (club multisport)
+  - Contratti/affiliazioni Person<->Team/Unit (ok)
+- Entità non core:
+  - Leghe: sport-specific (quindi non core)
+- Federazioni & nazionali:
+  - Nick: federazione = sportunit di una nazione (sport-specific).
+  - Nazionali: sportunit della federazione (rappresentativa nazionale per sport).
+- SportUnit:
+  - Squadre di club = sportunit di un club per uno sport.
+  - Nazionali = sportunit collegate a federation (+ country + sport).
+- Affiliation/Contract:
+  - ok; storicizzazione desiderata **più avanti** (MVP può partire con “stato attuale”).
+
+### Bozza schema concettuale (core DB) allineata alle ultime preferenze di Nick
+- Country(id, name, iso)
+- Person(id, …)
+- PersonCitizenship(person_id, country_id, from_date?, to_date?)
+- Club(id, name, country_id?, …)  # Organization trasversale
+- Sport(id, slug, name)           # dizionario minimo
+- Federation(id, sport_id, country_id, name, …)  # sport-specific per nazione
+- SportUnit(id, sport_id, kind, club_id?, federation_id?, name, …)
+  - kind: club_team | national_team | …
+- Affiliation(id, person_id, sportunit_id, role, start_date?, end_date?)
+- Nota: nei DB sport salvare solo `person_id`/`sportunit_id` (UUID) senza FK cross-db.
+
+## UI ispirazione
+- UI “alla Football Manager”: densa, data-heavy, tabelle, filtri, drill-down.
+- Implicazioni FE (da considerare): data-grid serio, virtualizzazione, caching query, URL=state.
+
+## Decisioni chiave prese
+1) FE: React+TS, **Next.js subito**
+2) BE: **Django + DRF**
+3) Repo: **monorepo**
+4) DB: Postgres con **DB core + DB separati per sport**
+5) Subdomain sport: sì (calcio., volley., …)
+6) Login unico cross-subdomain: sì (futuro)
+7) Hub: preferenza per **app.miosito.com** come area personale inter-sport
+8) Admin UX: CRUD dentro UI Next per admin; Django Admin solo emergenza
+9) Ricerca: per-sport nel breve
+10) Modello dati: **ibrido**; Person/Club core, Federations sport-specific, SportUnits collegate.
+
+## Domande aperte (non risolte)
+- Se il **DB core** è down: i subdomain sport devono funzionare in consultazione (via cache/replica) o possono degradare?
+- Strategia ingest (scraping/API) e worker/queue (Celery/RQ) per isolamento.
+- Strategia per “aggregazione dashboard” (server-side dal core vs indice search/ETL).
+- Convenzioni per mapping subdomain -> sport_id e db alias.
+- Scelte infra: reverse proxy (Nginx/Caddy), TLS wildcard `*.miosito.com`, ambienti dev/prod.
+
+## NOTE OPERATIVE (promemoria per la nuova chat)
+- Quando riprendi: chiedere la risposta alla domanda aperta sul core DB down.
+- Poi: proporre un “reference architecture” con diagramma logico: Next (host routing) + Django (multi-db router) + Postgres (core + sport dbs) + proxy mapping /api per subdomain.
+
+
+## Domande e risposte precedenti
+Q1) Tipo di software?
+A1) Webapp B2C (credo).
+
+Q2) Cosa fa per l’utente in una frase?
+A2) Piattaforma che raccoglie e mostra dati/info su molti sport (squadra + individuali) solo per consultazione.
+
+Q3) Da dove arrivano i dati?
+A3) Inizialmente inserimento manuale; poi scraping e/o API di terze parti.
+
+Q4) Che tipo di consultazione (must-have iniziale)?
+A4) Tutto in roadmap, ma inizialmente: pagine profilo + filtri/facet + ricerca testuale.
+    Più avanti: classifiche, risultati, calendari, statistiche avanzate (per singolo sport).
+    Personalizzazione invece trasversale (cross-sport).
+
+Q5) Account/login e personalizzazione?
+A5) Non all’inizio. A lungo termine sì: registrazione sulla piattaforma “core” + dashboard con sport scelti.
+
+Q6) Quanti utenti/carico in fase 1?
+A6) Fase 1: solo io. Lungo termine: tanti (auspicato).
+
+Q7) Separazione per sport (UI+DB) già da subito o solo più avanti?
+A7) La vorrei già da subito per comodità mentale e per evitare migrazioni dolorose, anche con 2 sport.
+
+Q8) “DB separato per sport” = A/B/C?
+A8) Preferenza per DB separati o almeno schemi separati; obiettivo: isolamento tra sport.
+
+Q9) Ogni sport come servizio separato oppure app unica?
+A9) All’inizio non sapevo; dopo pro/contro: scelgo app unica con separazione a livello DB (e modularità per estrarre in futuro).
+
+Q10) Ricerca: per-sport o cross-sport?
+A10) Breve termine: solo per-sport. Lungo termine: forse cross-sport, ma non prioritaria (c’è già Google).
+
+Q11) SEO/first load: SSR/SSG necessario subito?
+A11) Non fondamentale all’inizio; se scala bene allora sì.
+
+Q12) Stack preferito?
+A12) Ho esperienza con Django (monolite/DB unico), ma ero indeciso sullo stack complessivo.
+
+Q13) Framework FE preferito?
+A13) React + TypeScript.
+
+Q14) Next.js subito o no?
+A14) Next subito (anche se non l’ho mai usato).
+
+Q15) Backend: Django o TS backend?
+A15) Django.
+
+Q16) Repo: monorepo o due repo?
+A16) Unico repo (monorepo).
+
+Q17) Postgres: DB separati vs schemi separati?
+A17) DB separati per sport (mi cambia poco, ok DB separati).
+
+Q18) Inserimento manuale: Django Admin o UI in Next?
+A18) UI in Next dentro ogni sport (create/edit/delete visibili solo ad admin/superadmin).
+    Django Admin resta solo come “leva di emergenza”.
+
+Q19) Deploy FE: una sola app Next per tutti i subdomain o deploy separati per sport?
+A19) Piano preferito: iniziare con una sola app Next che serve hub + sport subdomain (host-based),
+    mantenendo modularità per separare/deployare per sport in futuro se serve.
+
+Q20) Subdomain per sport: li voglio?
+A20) Sì: volley.miosito.com, calcio.miosito.com, ecc. (non come app separate subito, ma come routing/branding).
+
+Q21) Login unico su tutti i subdomain?
+A21) Sì, login unico cross-subdomain.
+
+Q22) Modellazione dati: per-sport, agnostica, o ibrida? E quali entità core?
+A22) Ibrida.
+    Core trasversale: Country; Person (con cittadinanze/nazionalità potenzialmente multiple/nel tempo); Club/Organization (multi-sport);
+    contratti/affiliazioni Person<->Organization/SportUnit.
+    Federazioni: sport-specific (una federazione per nazione per sport).
+    Nazionali: SportUnit della federazione; squadre di club: SportUnit del club.
+    OK usare riferimenti ID unici dai DB sport verso il core anche senza FK “vere”.
+    Storicizzazione: non subito, ma desiderata più avanti.
+
+## Mappa decisionale in 10 righe
+MAPPA DECISIONALE (10 righe)
+
+1) Prodotto: webapp B2C multi-sport; MVP = uso personale, consultazione.
+2) UX target: data-heavy “alla Football Manager” (tabelle, filtri, drill-down).
+3) Frontend: React + TypeScript, Next.js subito (inizio SPA-like, SSR/SSG dopo).
+4) Backend: Django + DRF (API).
+5) Repo: monorepo (frontend/ + backend/).
+6) Domini: app.miosito.com = hub (login, profilo, dashboard cross-sport in futuro); *.miosito.com = sport (calcio., volley., …).
+7) Auth: sessioni Django via cookie condiviso Domain=.miosito.com (HTTPS, HttpOnly, SameSite=Lax); tokens/OAuth2 solo più avanti per mobile/partner.
+8) API: esposte same-origin su ogni subdomain via reverse proxy (es. calcio.miosito.com/api -> Django) per evitare CORS.
+9) Dati: Postgres con DB core separato + DB separati per sport; nei DB sport solo riferimenti ID (no FK cross-db).
+10) Modello dati: ibrido; core = Country/Person/Citizenship/Club/Federation(sport-specific)/SportUnit/Affiliation; sport DB = gare/stagioni/competizioni/stats; storicizzazione affiliazioni dopo.
