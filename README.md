@@ -168,9 +168,9 @@ repo/
     verticals/
       bootstrap.yaml
 
-  backend/
-    shared/                     # solo tecnico: contracts, errors, observability, utils
+  server/
     platform/                   # Django project + apps core (registry, identity, inbox, auth)
+    shared/                     # solo tecnico: contracts, errors, observability, utils
     verticals/
       volley/                   # Django project/app per [vertical] (API + read-model)
       football/
@@ -193,15 +193,19 @@ repo/
 
 ### Phase 0 — Bootstrap repo e dev environment
 
-- Monorepo skeleton (backend/ui/infra/docs).
-- Docker Compose dev:
-  - reverse-proxy + postgres + platform-api + volley-api (+ opz web).
-- Convenzioni base:
-  - snake_case JSON
-  - error format + error codes catalog
-  - request_id + traceparent propagation
+- [x] Monorepo skeleton (backend/ui/infra/docs).
+- [x] Docker Compose dev:
+  - [x] reverse-proxy + postgres + platform-api + volley-api (+ opz web).
+- [ ] Convenzioni base:
+  - [ ] snake_case JSON
+  - [ ] error format + error codes catalog
+  - [ ] request_id + traceparent propagation
 
-Deliverable: `GET /health` ovunque + logging coerente + DB up.
+Deliverable:
+
+- [x] `GET /health` ovunque
+- [ ] logging coerente
+- [x] DB up
 
 ### Phase 1 — Platform Registry (bootstrap Git “C” + runtime + heartbeat)
 
