@@ -34,8 +34,9 @@ ALLOWED_HOSTS = ["*"]
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
-    "ninja",
     "volley_api",
+    "ninja",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

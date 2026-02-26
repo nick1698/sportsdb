@@ -160,8 +160,9 @@ import os
 ALLOWED_HOSTS = ["*"]
 
 · add to INSTALLED_APPS:
-    "ninja",
     "${API_APP}",
+    "ninja",
+    "django_extensions",
 
 · override:
 DATABASES = {
