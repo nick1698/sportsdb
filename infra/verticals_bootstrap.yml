@@ -1,0 +1,5 @@
+verticals:
+  - key: volley
+    type: sport
+    display_name: Volleyball
+    public_base_url: https://volley.localhost
