@@ -156,6 +156,9 @@ cat <<EOF
 · add among imports:
 import os
 
+· fix this:
+ALLOWED_HOSTS = ["*"]
+
 · add to INSTALLED_APPS:
     "ninja",
     "${API_APP}",
