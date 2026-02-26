@@ -68,7 +68,7 @@ services:
     build:
       context: ../../server
       dockerfile: ./verticals/volley/Dockerfile.dev
-    container_name: spdb_volley_api
+    container_name: spdb_api_volley
     restart: unless-stopped
     depends_on:
       postgres:
