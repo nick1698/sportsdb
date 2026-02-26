@@ -41,8 +41,8 @@ services:
   # Sostituiscilo con il tuo container Django (platform-api) al passo successivo.
   platform-api:
     build:
-      context: ../../server/platform
-      dockerfile: Dockerfile.dev
+      context: ../../server
+      dockerfile: ./platform/Dockerfile.dev
     container_name: spdb_api_platform
     restart: unless-stopped
     depends_on:
@@ -67,8 +67,8 @@ services:
   # Placeholder per il vertical "volley".
   volley-api:
     build:
-      context: ../../server/verticals/volley
-      dockerfile: Dockerfile.dev
+      context: ../../server
+      dockerfile: ./verticals/volley/Dockerfile.dev
     container_name: spdb_volley_api
     restart: unless-stopped
     depends_on:
