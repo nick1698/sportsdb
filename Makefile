@@ -1,6 +1,6 @@
 COMPOSE_DEV=infra/compose/docker-compose.dev.yml
 
-.PHONY: up down ps logs status tools
+.PHONY: up down ps logs status tools-up tools-down
 
 up:
 	docker compose --env-file .env -f $(COMPOSE_DEV) up -d --remove-orphans
@@ -15,8 +15,11 @@ logs:
 	docker compose --env-file .env -f $(COMPOSE_DEV) logs -f --tail=200
 
 # Avvia anche i container "tooling" (adminer, ecc.)
-tools:
+tools-up:
 	docker compose --env-file .env -f $(COMPOSE_DEV) --profile tools up -d
+
+tools-down:
+	docker compose --env-file .env -f $(COMPOSE_DEV) stop adminer
 
 ps:
 	docker compose --env-file .env -f $(COMPOSE_DEV) exec postgres sh -lc 'psql -U "$$POSTGRES_USER" -d platform_db'
