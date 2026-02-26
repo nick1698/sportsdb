@@ -40,51 +40,55 @@ services:
   # Placeholder per testare subito routing + healthcheck.
   # Sostituiscilo con il tuo container Django (platform-api) al passo successivo.
   platform-api:
-    image: traefik/whoami:v1.11.0
+    build:
+      context: ../../server/platform
+      dockerfile: Dockerfile.dev
     container_name: spdb_api_platform
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      DJANGO_DEBUG: "1"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-secret-key}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-spdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
+      PLATFORM_DB: ${PLATFORM_DB:-platform_db}
     networks:
       - spdb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.platform-api.rule=Host(`platform.${DEV_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.platform-api.rule=Host(`platform.${DEV_DOMAIN}`)"
       - "traefik.http.routers.platform-api.entrypoints=web"
-      - "traefik.http.routers.platform-api.middlewares=platform-api-stripprefix@docker"
-      - "traefik.http.middlewares.platform-api-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.services.platform-api.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["NONE"]
-      # test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      - "traefik.http.services.platform-api.loadbalancer.server.port=8000"
 
   # Placeholder per il vertical "volley".
   volley-api:
-    image: traefik/whoami:v1.11.0
-    container_name: spdb_api_volley
+    build:
+      context: ../../server/verticals/volley
+      dockerfile: Dockerfile.dev
+    container_name: spdb_volley_api
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      DJANGO_DEBUG: "1"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-secret-key}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-spdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
+      VOLLEY_DB: ${VOLLEY_DB:-volley_db}
     networks:
       - spdb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.volley-api.rule=Host(`volley.${DEV_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.volley-api.rule=Host(`volley.${DEV_DOMAIN}`)"
       - "traefik.http.routers.volley-api.entrypoints=web"
-      - "traefik.http.routers.volley-api.middlewares=volley-api-stripprefix@docker"
-      - "traefik.http.middlewares.volley-api-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.services.volley-api.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["NONE"]
-      # test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      - "traefik.http.services.volley-api.loadbalancer.server.port=8000"
 
   # Tooling (facoltativo): avvialo con `docker compose --profile tools up -d`
   adminer:
