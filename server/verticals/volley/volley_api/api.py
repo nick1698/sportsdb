@@ -1,6 +1,6 @@
-from ninja import NinjaAPI
+from shared.api_contract.factory import build_api
 
-api = NinjaAPI(title="SPDB volley API")
+api = build_api(title="Volley API")
 
 
 @api.get("/health")

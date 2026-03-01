@@ -43,6 +43,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "shared.api_contract.request_id.RequestIdMiddleware",
 ]
 
 ROOT_URLCONF = "volley_service.urls"

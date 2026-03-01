@@ -1,7 +1,10 @@
 from django.db import connection
-from ninja import NinjaAPI
+from django.http import JsonResponse
 
-api = NinjaAPI(title="SPDB Platform API")
+from shared.api_contract.factory import build_api
+from shared.api_contract.errors import ApiError, error_payload
+
+api = build_api(title="Volley API")
 
 
 @api.get("/health")
