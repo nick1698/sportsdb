@@ -4,7 +4,7 @@ COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 # service: platform | volley | football ...
 SVC ?= platform
 
-.PHONY: build up down ps logs status tools-up tools-down manage makemigrations migrate showmigrations create-vertical reset-db
+.PHONY: build up down ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
 
 build:
 	${COMPOSE} up -d --build
@@ -30,6 +30,10 @@ tools-down:
 
 ps:
 	${COMPOSE} exec postgres sh -lc 'psql -U "$$POSTGRES_USER" -d $(SVC)_db'
+
+# e.g.: mk enter SVC=[platform]
+enter:
+	$(COMPOSE) exec $(SVC)-api bash
 
 # e.g.: mk manage SVC=[platform] ARGS="..."
 manage:
