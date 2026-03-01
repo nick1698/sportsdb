@@ -12,7 +12,7 @@ services:
       - "8080:8080" # Traefik dashboard (dev only)
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "../reverse-proxy/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "./reverse-proxy/traefik.yml:/etc/traefik/traefik.yml:ro"
     networks:
       - spdb
 
@@ -39,7 +39,7 @@ services:
 
   platform-api:
     build:
-      context: ../../server
+      context: ../server
       dockerfile: ./platform/Dockerfile.dev
     container_name: spdb_api_platform
     restart: unless-stopped
@@ -54,6 +54,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-spdb}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
       PLATFORM_DB: ${PLATFORM_DB:-platform_db}
+      PYTHONPATH: /app
     networks:
       - spdb
     labels:
@@ -62,11 +63,12 @@ services:
       - "traefik.http.routers.platform-api.entrypoints=web"
       - "traefik.http.services.platform-api.loadbalancer.server.port=8000"
     volumes:
-      - ../../server/platform:/app
+      - ../server/platform:/app/backend
+      - ../server/shared:/app/shared:z
 
   volley-api:
     build:
-      context: ../../server
+      context: ../server
       dockerfile: ./verticals/volley/Dockerfile.dev
     container_name: spdb_api_volley
     restart: unless-stopped
@@ -81,6 +83,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-spdb}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
       VOLLEY_DB: ${VOLLEY_DB:-volley_db}
+      PYTHONPATH: /app
     networks:
       - spdb
     labels:
@@ -89,7 +92,8 @@ services:
       - "traefik.http.routers.volley-api.entrypoints=web"
       - "traefik.http.services.volley-api.loadbalancer.server.port=8000"
     volumes:
-      - ../../server/verticals/volley:/app
+      - ../server/verticals/volley:/app/backend
+      - ../server/shared:/app/shared:z
 
   adminer:
     image: adminer:4

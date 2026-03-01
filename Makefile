@@ -1,4 +1,4 @@
-COMPOSE_DEV = infra/compose/docker-compose.dev.yml
+COMPOSE_DEV = infra/docker-compose.dev.yml
 COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 
 # service: platform | volley | football ...
