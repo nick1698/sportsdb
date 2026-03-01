@@ -16,7 +16,7 @@ fi
 
 ENV_FILE="${ROOT_DIR}/.env"
 INITDB_FILE="${ROOT_DIR}/infra/scripts/initdb.sql"
-COMPOSE_FILE="${ROOT_DIR}/infra/compose/docker-compose.dev.yml"
+COMPOSE_FILE="${ROOT_DIR}/infra/docker-compose.dev.yml"
 
 echo "************ SPDB: Vertical generator ************"
 echo
@@ -52,7 +52,7 @@ SUBDOMAIN="${SUBDOMAIN:-$VERTICAL}"
 SERVICE_BLOCK=$(cat <<EOF
   ${VERTICAL}-api:
     build:
-      context: ../../server
+      context: ../server
       dockerfile: ./verticals/${VERTICAL}/Dockerfile.dev
     container_name: spdb_api_${VERTICAL}
     restart: unless-stopped
@@ -67,6 +67,7 @@ SERVICE_BLOCK=$(cat <<EOF
       POSTGRES_USER: \${POSTGRES_USER:-spdb}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-spdb}
       ${DB_ENV}: \${${DB_ENV}:-${DB_NAME}}
+      PYTHONPATH: "/app"
     networks:
       - spdb
     labels:
@@ -75,7 +76,8 @@ SERVICE_BLOCK=$(cat <<EOF
       - "traefik.http.routers.${VERTICAL}-api.entrypoints=web"
       - "traefik.http.services.${VERTICAL}-api.loadbalancer.server.port=8000"
     volumes:
-      - ../../server/verticals/${VERTICAL}:/app
+      - ../server/verticals/${VERTICAL}:/app/backend
+      - ../server/shared:/app/shared
 EOF
 )
 
@@ -120,10 +122,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-COPY ./verticals/${VERTICAL} /app
+COPY ./verticals/${VERTICAL} /app/backend
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+WORKDIR /app/backend
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 EOF
@@ -137,7 +140,7 @@ fi
 VERTICAL_DJ="server/verticals/${VERTICAL}"
 SETTINGS_FILE="${VERTICAL_DJ}/${SERVICE_PKG}/settings.py"
 URLS_FILE="${VERTICAL_DJ}/${SERVICE_PKG}/urls.py"
-API_FILE="${VERTICAL_DJ}/${API_APP}/urls.py"
+API_FILE="${VERTICAL_DJ}/${API_APP}/api.py"
 
 echo
 echo "+++> Manual steps <+++"
@@ -163,6 +166,10 @@ ALLOWED_HOSTS = ["*"]
     "${API_APP}",
     "ninja",
     "django_extensions",
+
+· add to MIDDLEWARE:
+-    "server.libs.spdb_shared.api_contract.request_id.RequestIdMiddleware",
+  
 
 · override:
 DATABASES = {
@@ -201,23 +208,17 @@ the whole AUTH_PASSWORD_VALIDATORS
 EOF
 
 read -r -p "Move on to step 2? [click Enter] "
+echo "##### STEP 2: automatically creating '${API_FILE}'... #####"
 
-cat <<EOF
+cat > "${API_FILE}" <<EOF
+from shared.api_contract.factory import build_api
 
-
-##### STEP 2: create '${API_FILE}' with content: [copy] #####
-
-
-from ninja import NinjaAPI
-
-api = NinjaAPI(title="SPDB ${VERTICAL} API")
+api = build_api(title="SPDB ${VERTICAL} API")
 
 
 @api.get("/health")
 def health(request):
     return {"status": "ok", "service": "${VERTICAL}"}
-
-
 EOF
 
 read -r -p "Move on to step 3? [click Enter] "
