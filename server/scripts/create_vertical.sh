@@ -15,20 +15,24 @@ if [[ ! -f "$BASE_REQ" ]]; then
 fi
 
 ENV_FILE="${ROOT_DIR}/.env"
-INITDB_FILE="${ROOT_DIR}/infra/scripts/initdb.sql"
-COMPOSE_FILE="${ROOT_DIR}/infra/docker-compose.dev.yml"
+INFRA_DIR="${ROOT_DIR}/infra"
 
 echo "************ SPDB: Vertical generator ************"
 echo
 
-# reading VERTICAL key from stdin
-read -r -p "+++> Vertical key-name [a-z0-9_]: " VERTICAL
+VERTICAL="${1:-}"
+
+if [[ -z "$VERTICAL" ]]; then
+  read -r -p "+++> Vertical key-name [a-z0-9_]: " VERTICAL
+fi
+
 if [[ -z "${VERTICAL:-}" ]]; then
   echo "Aborted: empty key"
   exit 1
 fi
 
 TARGET_DIR="${VERTICALS_DIR}/${VERTICAL}"
+
 # check if Vertical does not exist already
 if [[ -e "$TARGET_DIR" ]]; then
   echo "Error: ${TARGET_DIR} already exists."
@@ -40,11 +44,12 @@ if [[ ! "$VERTICAL" =~ ^[a-z0-9_]+$ ]]; then
   exit 1
 fi
 
+echo "***** SPDB: Generating ${VERTICAL}... *****"
+
 # Constants using Vertical key
 DB_NAME="${VERTICAL}_db"
 SERVICE_PKG="${VERTICAL}_service"
 API_APP="${VERTICAL}_api"
-DB_ENV="${VERTICAL^^}_DB"
 
 read -r -p "+++> Subdomain (host prefix, e.g.: ${VERTICAL}.spdb) [${VERTICAL}]: " SUBDOMAIN
 SUBDOMAIN="${SUBDOMAIN:-$VERTICAL}"
@@ -66,7 +71,6 @@ SERVICE_BLOCK=$(cat <<EOF
       POSTGRES_PORT: "5432"
       POSTGRES_USER: \${POSTGRES_USER:-spdb}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-spdb}
-      ${DB_ENV}: \${${DB_ENV}:-${DB_NAME}}
       PYTHONPATH: "/app"
     networks:
       - spdb
@@ -86,15 +90,14 @@ echo "---- Summary ----"
 echo "Vertical dir:   server/verticals/${VERTICAL}/"
 echo "Django project: ${SERVICE_PKG}"
 echo "Django app:     ${API_APP}"
-echo "DB env var:     ${DB_ENV}"
 echo "DB default:     ${DB_NAME}"
 echo "Subdomain:      ${SUBDOMAIN}.\${DEV_DOMAIN}"
 echo "Python image:   python:3.12-slim"
 echo "-----------------"
 echo
 
-echo "==> Creating directory '${TARGET_DIR}'..."
-read -r -p "+++> Proceed? [y/N]: " CONFIRM
+echo "==> 1) About to create vertical directory '${TARGET_DIR}'"
+read -r -p "Proceed? [y/N]: " CONFIRM
 if [[ "${CONFIRM:-}" != "y" && "${CONFIRM:-}" != "Y" ]]; then
   echo "Aborted."
   exit 1
@@ -103,14 +106,17 @@ fi
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
+# --------------------------
+# Creating vertical dir
+# --------------------------
 echo
-echo "==> Creating Django project: ${SERVICE_PKG}..."
+echo "==> 2) Creating Django project: ${SERVICE_PKG}..."
 django-admin startproject "$SERVICE_PKG" .
 
-echo "==> Creating Django app: ${API_APP}..."
+echo "==> 3) Creating Django app: ${API_APP}..."
 python manage.py startapp "$API_APP"
 
-echo "==> Writing Dockerfile.dev..."
+echo "==> 4) Writing Dockerfile.dev..."
 cat > Dockerfile.dev <<EOF
 FROM python:3.12-slim
 
@@ -131,86 +137,120 @@ EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 EOF
 
-echo "==> Deleting ${API_APP}/tests.py..."
-FILE="${VERTICALS_DIR}/${VERTICAL}/${API_APP}/tests.py"
-if [[ -f "$FILE" ]]; then
-  rm -f "$FILE"
+echo "    ✓ Done!"
+echo
+read -r -p "Proceed? [Enter] "
+
+# --------------------------
+# Auto-patches (Django files)
+# --------------------------
+echo
+echo "==> 5) Automatically update Django app..."
+
+SETTINGS_FILE="${TARGET_DIR}/${SERVICE_PKG}/settings.py"
+URLS_FILE="${TARGET_DIR}/${SERVICE_PKG}/urls.py"
+TESTS_FILE="${TARGET_DIR}/${API_APP}/tests.py"
+API_FILE="${TARGET_DIR}/${API_APP}/api.py"
+
+echo "====> 5.1) Editing '${SERVICE_PKG}/settings.py'..."
+
+# add import os if missing
+if ! grep -qxF 'import os' "$SETTINGS_FILE"; then
+  sed -i '/^from pathlib import Path$/a import os' "$SETTINGS_FILE"
 fi
 
-VERTICAL_DJ="server/verticals/${VERTICAL}"
-SETTINGS_FILE="${VERTICAL_DJ}/${SERVICE_PKG}/settings.py"
-URLS_FILE="${VERTICAL_DJ}/${SERVICE_PKG}/urls.py"
-API_FILE="${VERTICAL_DJ}/${API_APP}/api.py"
+# fix ALLOWED_HOSTS
+sed -i 's/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ["*"]/' "$SETTINGS_FILE"
 
-echo
-echo "+++> Manual steps <+++"
-echo
+# add to INSTALLED_APPS before closing ]
+sed -i "/^INSTALLED_APPS = \[/,/^]$/ {
+  /'${API_APP//\//\\/}'/! {
+    /^]$/i\    \"${API_APP}\",
+  }
+  /'ninja'/! {
+    /^]$/i\    \"ninja\",
+  }
+  /'django_extensions'/! {
+    /^]$/i\    \"django_extensions\",
+  }
+}" "$SETTINGS_FILE"
 
-read -r -p "STEP 0: Is the variable '${DB_ENV}' present in the '.env' file? [y/N]: " CONFIRM
-if [[ "${CONFIRM:-}" != "y" && "${CONFIRM:-}" != "Y" ]]; then
-  echo "Aborted."
-  exit 0
-fi
+# remove from INSTALLED_APPS
+sed -i "/^INSTALLED_APPS = \[/,/^]$/ {
+  /django\.contrib\.admin/d
+  /django\.contrib\.auth/d
+  /django\.contrib\.sessions/d
+  /django\.contrib\.messages/d
+}" "$SETTINGS_FILE"
 
-cat <<EOF
+# remove from MIDDLEWARE
+sed -i "/^MIDDLEWARE = \[/,/^]$/ {
+  /django\.contrib\.auth\.middleware\.AuthenticationMiddleware/d
+  /django\.contrib\.sessions\.middleware\.SessionMiddleware/d
+  /django\.contrib\.messages\.middleware\.MessageMiddleware/d
+  /django\.middleware\.csrf\.CsrfViewMiddleware/d
+  /server\.libs\.spdb_shared\.api_contract\.request_id\.RequestIdMiddleware/d
+}" "$SETTINGS_FILE"
 
-##### STEP 1: edit '${SETTINGS_FILE}' #####
+# add to MIDDLEWARE
+grep -q 'shared\.api_contract\.request_id\.RequestIdMiddleware' "$SETTINGS_FILE" || \
+sed -i '/^MIDDLEWARE = \[/,/^]$/ {
+  /^]$/i\    "shared.api_contract.request_id.RequestIdMiddleware",
+}' "$SETTINGS_FILE"
 
-· add among imports:
-import os
+# remove from TEMPLATES.OPTIONS.context_processors
+sed -i "/'context_processors': \[/,/]/ {
+  /django\.contrib\.auth\.context_processors\.auth/d
+}" "$SETTINGS_FILE"
 
-· fix this:
-ALLOWED_HOSTS = ["*"]
+# replace whole DATABASES block
+sed -i "/^DATABASES = {$/,/^}$/c\\
+DATABASES = {\\
+    \"default\": {\\
+        \"ENGINE\": \"django.db.backends.postgresql\",\\
+        \"NAME\": \"${DB_NAME}\",\\
+        \"USER\": os.getenv(\"POSTGRES_USER\", \"spdb\"),\\
+        \"PASSWORD\": os.getenv(\"POSTGRES_PASSWORD\", \"spdb\"),\\
+        \"HOST\": os.getenv(\"POSTGRES_HOST\", \"postgres\"),\\
+        \"PORT\": os.getenv(\"POSTGRES_PORT\", \"5432\"),\\
+        \"CONN_MAX_AGE\": 60,\\
+    }\\
+}" "$SETTINGS_FILE"
 
-· add to INSTALLED_APPS:
-    "${API_APP}",
-    "ninja",
-    "django_extensions",
+# TIME_ZONE = "UTC"
+sed -i "s/^TIME_ZONE = .*/TIME_ZONE = \"UTC\"/" "$SETTINGS_FILE"
 
-· add to MIDDLEWARE:
--    "server.libs.spdb_shared.api_contract.request_id.RequestIdMiddleware",
-  
+# USE_TZ = True
+sed -i "s/^USE_TZ = .*/USE_TZ = True/" "$SETTINGS_FILE"
 
-· override:
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("${DB_ENV}", "${DB_NAME}"),
-        "USER": os.getenv("POSTGRES_USER", "spdb"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "spdb"),
-        "HOST": os.getenv("POSTGRES_HOST", "postgres"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
-        "CONN_MAX_AGE": 60,
-    }
-}
+# remove whole AUTH_PASSWORD_VALIDATORS block
+sed -i '/^# Password validation$/,/^\]$/d' "$SETTINGS_FILE"
+sed -i '/^AUTH_PASSWORD_VALIDATORS = \[$/,/^\]$/d' "$SETTINGS_FILE"
 
-· check:
-TIME_ZONE = "UTC"
-USE_TZ = True
+echo "      ✓ Done!"
+echo "====> 5.2) Truncating '${SERVICE_PKG}/urls.py'..."
 
+# cd "${TARGET_DIR}/${SERVICE_PKG}"
 
-· remove:
-from INSTALLED_APPS:
--    'django.contrib.admin',
--    'django.contrib.auth',
--    'django.contrib.sessions',
--    'django.contrib.messages',
-from MIDDLEWARE
--    'django.contrib.auth.middleware.AuthenticationMiddleware',
--    'django.contrib.sessions.middleware.SessionMiddleware',
--    'django.contrib.messages.middleware.MessageMiddleware',
--    'django.middleware.csrf.CsrfViewMiddleware',
-from TEMPLATES.OPTIONS.context_processors:
--    'django.contrib.auth.context_processors.auth'
-the whole AUTH_PASSWORD_VALIDATORS
+cat > "$URLS_FILE" <<EOF
+from django.urls import path
+from ${API_APP}.api import api
 
-
+urlpatterns = [
+    path("api/", api.urls),
+]
 EOF
 
-read -r -p "Move on to step 2? [click Enter] "
-echo "##### STEP 2: automatically creating '${API_FILE}'... #####"
+echo "      ✓ Done!"
+echo "====> 5.3) Deleting '${API_APP}/tests.py'..."
+if [[ -f "$TESTS_FILE" ]]; then
+  rm -f "$TESTS_FILE"
+fi
 
-cat > "${API_FILE}" <<EOF
+echo "      ✓ Done!"
+echo "====> 5.4) Creating '${API_APP}/api.py'..."
+
+cat > "$API_FILE" <<EOF
 from shared.api_contract.factory import build_api
 
 api = build_api(title="SPDB ${VERTICAL} API")
@@ -221,62 +261,65 @@ def health(request):
     return {"status": "ok", "service": "${VERTICAL}"}
 EOF
 
-read -r -p "Move on to step 3? [click Enter] "
-
-cat <<EOF
-
-##### STEP 3: replace the whole content of '${URLS_FILE}' with: [copy] #####
-
-from django.urls import path
-from ${API_APP}.api import api
-
-urlpatterns = [
-    path("api/", api.urls),
-]
-
-EOF
-
-read -r -p "Manual patches done! Move on to infra files auto-patching: [click Enter] "
+echo "      ✓ Done!"
+echo
+read -r -p "Proceed? [Enter] "
 
 # --------------------------
 # Auto-patches (infra files)
 # --------------------------
 echo
-echo "==> Auto-patching infra files"
+echo "==> 6) Auto-patch infra files"
 
-# 1) initdb.sql — aggiunge CREATE DATABASE se manca
-if [[ -f "$INITDB_FILE" ]]; then
-  if ! grep -Eq "^\s*CREATE\s+DATABASE\s+${DB_NAME}\s*;" "$INITDB_FILE"; then
-    {
-      echo ""
-      echo "-- added by create_vertical.sh (${VERTICAL})"
-      echo "CREATE DATABASE ${DB_NAME};"
-    } >> "$INITDB_FILE"
-    echo "   ✓ initdb.sql: added CREATE DATABASE ${DB_NAME};"
-  else
-    echo "   = initdb.sql: DB already present"
-  fi
+DB_INDEX_FILE="${INFRA_DIR}/db/verticals/_index_.sql"
+DB_GEN_FILE="${INFRA_DIR}/db/verticals/${VERTICAL}.sql"
+
+# db/verticals/_index_.sql — check existance or write the first line
+echo "====> 6.1) Checking SQL index file clarity..."
+if [[ ! -f "$DB_INDEX_FILE" ]] || [[ ! -s "$DB_INDEX_FILE" ]]; then
+  echo "-- generated by server/scripts/create_vertical.sh - do not edit" > "$DB_INDEX_FILE"
+  echo "      ✓ _index_.sql: generated bootstrap file"
 else
-  echo "   ! initdb.sql not found at: ${INITDB_FILE} (skipped)"
+  echo "      = _index_.sql: bootstrap file already present"
+
 fi
 
-# 2) .env — aggiunge o aggiorna <VERTICAL>_DB=<db>
-if [[ -f "$ENV_FILE" ]]; then
-  if grep -Eq "^${DB_ENV}=" "$ENV_FILE"; then
-    sed -i "s|^${DB_ENV}=.*|${DB_ENV}=${DB_NAME}|" "$ENV_FILE"
-    echo "   ✓ .env: updated ${DB_ENV}=${DB_NAME}"
-  else
-    echo "${DB_ENV}=${DB_NAME}" >> "$ENV_FILE"
-    echo "   ✓ .env: appended ${DB_ENV}=${DB_NAME}"
-  fi
+# db/verticals/_index_.sql — write the db line
+echo "====> 6.2) Writing on SQL index file..."
+if ! grep -Eq "^\\i db\/verticals\/${VERTICAL}.sql$" "$DB_INDEX_FILE"; then
+  echo "\i db/verticals/${VERTICAL}.sql" >> "$DB_INDEX_FILE"
+  echo "      ✓ _index_.sql: added ${VERTICAL} to the list of dbs to bootstrap;"
 else
-  echo "   ! .env not found at: ${ENV_FILE} (skipped)"
+  echo "      = _index_.sql: DB already present"
 fi
 
-# 3) docker-compose.dev.yml — inserisce il service block se manca
+# 1.3) db/verticals/[vertical].sql — generate the vertical file
+echo "====> 6.3) Generating the ${DB_NAME} SQL bootstrap file..."
+cat > "$DB_GEN_FILE" <<EOF
+-- generated: do not edit
+
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}') THEN
+    CREATE DATABASE ${DB_NAME} OWNER spdb_bootstrap;
+  END IF;
+END \$\$;
+
+\connect ${DB_NAME}
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+\connect postgres
+GRANT CONNECT ON DATABASE ${DB_NAME} TO spdb_app;
+EOF
+echo "      ✓ ${VERTICAL}.sql generated"
+
+
+# 2) docker-compose.dev.yml — inserisce il service block se manca
+echo "====> 6.4) Updating docker compose file inserting the new ${VERTICAL} service block..."
+COMPOSE_FILE="${INFRA_DIR}/docker-compose.dev.yml"
 if [[ -f "$COMPOSE_FILE" ]]; then
   if grep -Eq "^\s*${VERTICAL}-api:" "$COMPOSE_FILE"; then
-    echo "   = compose: service ${VERTICAL}-api already present"
+    echo "      = docker-compose: service ${VERTICAL}-api already present"
   else
     tmpfile="$(mktemp)"
     awk -v block="$SERVICE_BLOCK" '
@@ -290,10 +333,10 @@ if [[ -f "$COMPOSE_FILE" ]]; then
         }
       }
     ' "$COMPOSE_FILE" > "$tmpfile" && mv "$tmpfile" "$COMPOSE_FILE"
-    echo "   ✓ compose: added service ${VERTICAL}-api"
+    echo "      ✓ docker-compose: added service ${VERTICAL}-api"
   fi
 else
-  echo "   ! compose not found at: ${COMPOSE_FILE} (skipped)"
+  echo "      ! docker-compose: not found at ${COMPOSE_FILE} (skipped)"
 fi
 
 echo
