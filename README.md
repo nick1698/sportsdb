@@ -156,23 +156,36 @@ Per utente:
 - `minio` per storage oggetti (media, asset).
 - stack osservabilità (otel collector + grafana/tempo) se vuoi tracing end-to-end “vero”.
 
-## 5. Struttura repo (proposta)
+## 5. Struttura repo aggiornata
 
 ```text
 repo/
   infra/
-    compose/
-      docker-compose.dev.yml
+    docker-compose.dev.yml
+    verticals_bootstrap.yaml
     reverse-proxy/
-      traefik/...
-    verticals/
-      bootstrap.yaml
+      traefik.yml
+    scripts/
+      initdb.sql
 
   server/
     platform/                   # Django project + apps core (registry, identity, inbox, auth)
+      Dockerfile.dev
+      manage.py
+      platform_api
+      platform_service
     shared/                     # solo tecnico: contracts, errors, observability, utils
+      pyproject.toml
+      api_contract/
+        codes.py
+        errors.py
+        factory.py
+        ninja.py
+        request_id.py
+    scripts/
+      create_vertical.sh        # usato per creare vertical from scratch
     verticals/
-      volley/                   # Django project/app per [vertical] (API + read-model)
+      volley/                   # Django project/app per [vertical] -> stesso filesystem di "platform"
       football/
       ...
 
@@ -196,28 +209,106 @@ repo/
 - [x] Monorepo skeleton (backend/ui/infra/docs).
 - [x] Docker Compose dev:
   - [x] reverse-proxy + postgres + platform-api + volley-api (+ opz web).
-- [ ] Convenzioni base:
-  - [ ] snake_case JSON
-  - [ ] error format + error codes catalog
-  - [ ] request_id + traceparent propagation
+- [x] Convenzioni base:
+  - [x] error format + error codes catalog
+  - [x] request_id + traceparent propagation
 
 Deliverable:
 
 - [x] `GET /health` ovunque
-- [ ] logging coerente
 - [x] DB up
+- [ ] logging coerente
 
-### Phase 1 — Platform Registry (bootstrap Git “C” + runtime + heartbeat)
+### Phase 1 — Platform DB (Core Identity + Presence + Inbox)
 
-- Definire `infra/verticals/bootstrap.yaml` (whitelist).
-- Tabelle/Models registry nel DB platform:
-  - `Vertical` (stabile/pubblico)
-  - `VerticalRuntime` (dinamico: heartbeat, status, build_version, internal urls)
-- Endpoint:
-  - `GET /public/registry/verticals`
-  - `POST /internal/registry/heartbeat` (protetto con internal token)
+**Obiettivo:** creare il _Platform DB_ Postgres con le entità **cross-sport** (country/sport/geo/venue/org/person),
+le tabelle di **presence** (mapping platform ↔ vertical DB), e il workflow di **Inbox** per richieste `create/update/merge`.
 
-Deliverable: landing/UI può mostrare elenco vertical + stato.
+#### 1.1 Bootstrap DB + migrations
+
+- [ ] Abilitare estensione UUID (`pgcrypto`).
+- [ ] Impostare migrations per il Platform DB (Django migrations o Alembic, a scelta dello stack già deciso).
+- [ ] Seed iniziale:
+  - [ ] `country` (almeno IT + pochi altri)
+  - [ ] `sport` (almeno `volleyball`, `football`, …)
+
+#### 1.2 Core Identity (cross-sport)
+
+- [ ] `country`
+  - vincoli unique: `iso2`, `iso3`, `numeric_code`
+- [ ] `sport`
+  - PK: `key` (slug immutabile)
+  - unique: `name_en`
+- [ ] `geo_place`
+  - FK: `country_id`
+  - self-FK: `parent_id`
+  - coordinate coerenti (lat/lon entrambi null o entrambi valorizzati)
+- [ ] `venue`
+  - FK: `country_id`
+  - FK opzionale: `geo_place_id`
+  - coordinate coerenti
+- [ ] `org`
+  - `type` con mapping (MVP): `1=club`, `2=nation`
+  - FK: `country_id`
+  - FK opzionale: `home_geo_place_id`
+- [ ] `person`
+  - `sex`: `0=unknown`, `1=male`, `2=female`, `3=other`
+  - FK: `primary_nationality_id` (NOT NULL)
+  - FK opzionale: `sporting_nationality_id`
+  - check: `death_date >= birth_date` se entrambe presenti
+
+Deliverable: CRUD/admin minimo per tutte le entità core, con vincoli e indici applicati.
+
+#### 1.3 Presence (platform ↔ vertical DB mapping)
+
+> One-to-many ammesso: una `person`/`org` nel core può mapparsi a più record nel vertical.
+
+- [ ] `org_presence`
+  - FK: `org_id` (cascade)
+  - FK: `sport_key -> sport(key)`
+  - campi: `vertical_entity_id uuid`, `vertical_key text`
+  - unique: `(org_id, sport_key, vertical_entity_id)`
+- [ ] `person_presence`
+  - FK: `person_id` (cascade)
+  - FK: `sport_key -> sport(key)`
+  - campi: `vertical_entity_id uuid`, `vertical_key text`
+  - unique: `(person_id, sport_key, vertical_entity_id)`
+
+Deliverable: inserimenti di presence + verifica vincoli unique + query semplici per sport.
+
+#### 1.4 Inbox (governance MVP nel core)
+
+- [ ] `inbox_request`
+  - `entity_type`: `{org, person, venue, geo_place}`
+  - `action`: `{create, update, merge}`
+  - `status`: `{pending, approved, rejected, applied}` (default pending)
+  - context opzionale: `sport_key`, `vertical_id`, `vertical_key`
+  - target opzionale: `target_entity_id` (nullable per create)
+  - `payload jsonb NOT NULL`
+  - `dedupe_key` con unique parziale (solo se non null)
+  - audit fields (user_id, reviewed timestamps, review_note) anche se auth non è ancora integrata
+- [ ] `inbox_request_event`
+  - event log: `{created, approved, rejected, applied, comment}`
+  - FK: `request_id` (cascade)
+
+Deliverable:
+
+- endpoint _minimi_ (anche temporanei) o comandi admin per:
+  - creare request
+  - append eventi
+  - listare per `status` e `entity_type`
+
+#### 1.5 Timestamp policy
+
+- [ ] Tutte le tabelle: `ts_creation`, `ts_last_update` default `now()`
+- [ ] (Opzionale in Phase 1) trigger/logic per aggiornare `ts_last_update` su UPDATE
+
+#### **Obiettivi finali**
+
+- [ ] Migrations applicate su Postgres senza errori
+- [ ] Seed `country` + `sport`
+- [ ] Presence funzionante (vincoli + query)
+- [ ] Inbox funzionante (request + events + listing)
 
 ### Phase 2 — Fondamenta Identity nel core (senza inbox ancora completa)
 
