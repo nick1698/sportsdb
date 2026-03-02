@@ -2,4 +2,5 @@ verticals:
   - key: volley
     type: sport
     display_name: Volleyball
-    public_base_url: https://volley.localhost
+    public_base_url: https://volley.${DEV_DOMAIN}
+    db_name: volley_db
