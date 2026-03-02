@@ -4,16 +4,20 @@ COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 # service: platform | volley | football ...
 SVC ?= platform
 
-.PHONY: build up down ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
+.PHONY: build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
 
 build:
-	${COMPOSE} up -d --build
+	${COMPOSE} up -d --build ${ARGS}
 
 up:
 	${COMPOSE} up -d --remove-orphans
 
 down:
 	${COMPOSE} down
+
+down-v:
+	${COMPOSE} down -v
+	docker volume rm -f spdb_postgres_data || true
 
 status:
 	${COMPOSE} ps
