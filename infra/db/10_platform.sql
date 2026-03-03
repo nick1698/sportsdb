@@ -1,9 +1,7 @@
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'platform_db') THEN
-    CREATE DATABASE platform_db OWNER spdb_bootstrap;
-  END IF;
-END $$;
+SELECT 'CREATE DATABASE platform_db OWNER spdb_bootstrap'
+WHERE NOT EXISTS (
+  SELECT FROM pg_database WHERE datname = 'platform_db'
+)\gexec
 
 -- list extensions here:
 \connect platform_db

@@ -1,11 +1,9 @@
 -- generated: do not edit
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'volley_db') THEN
-    CREATE DATABASE volley_db OWNER spdb_bootstrap;
-  END IF;
-END $$;
+SELECT 'CREATE DATABASE volley_db OWNER spdb_bootstrap'
+WHERE NOT EXISTS (
+  SELECT FROM pg_database WHERE datname = 'volley_db'
+)\gexec
 
 \connect volley_db
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

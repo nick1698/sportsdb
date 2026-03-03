@@ -224,13 +224,10 @@ Deliverable:
 **Obiettivo:** creare il _Platform DB_ Postgres con le entità **cross-sport** (country/sport/geo/venue/org/person),
 le tabelle di **presence** (mapping platform ↔ vertical DB), e il workflow di **Inbox** per richieste `create/update/merge`.
 
-#### 1.1 Bootstrap DB + migrations
+#### 1.1 Bootstrap DB
 
-- [ ] Abilitare estensione UUID (`pgcrypto`).
-- [ ] Impostare migrations per il Platform DB (Django migrations o Alembic, a scelta dello stack già deciso).
-- [ ] Seed iniziale:
-  - [ ] `country` (almeno IT + pochi altri)
-  - [ ] `sport` (almeno `volleyball`, `football`, …)
+- [x] Sistemare DB bootstrap files
+- [x] Abilitare estensioni DB (`pgcrypto`, `citext`)
 
 #### 1.2 Core Identity (cross-sport)
 

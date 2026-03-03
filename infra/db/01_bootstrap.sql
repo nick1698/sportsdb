@@ -2,7 +2,7 @@
 
 \echo '== SPDB bootstrap start =='
 
-\i sql/10_platform_db.sql
-\i sql/20_verticals.generated.sql
+\i /db/10_platform.sql
+\i /db/verticals/_index_.sql
 
 \echo '== SPDB bootstrap done =='
