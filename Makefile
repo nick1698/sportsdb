@@ -4,7 +4,27 @@ COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 # service: platform | volley | football ...
 SVC ?= platform
 
-.PHONY: build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
+.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
+
+help:
+	@echo "Available commands:"
+	@echo "  mk help              - List all available commands"
+	@echo "  mk build             - Start the containers and rebuild images"
+	@echo "  mk up                - Start the containers"
+	@echo "  mk down              - Stop and remove the containers"
+	@echo "  mk down-v            - Stop and remove containers and DB volume"
+	@echo "  mk status            - Show container status"
+	@echo "  mk logs              - Show container logs"
+	@echo "  mk tools-up          - Start tooling containers"
+	@echo "  mk tools-down        - Stop tooling containers"
+	@echo "  mk ps                - Open psql on the SVC database"
+	@echo "  mk enter SVC=...     - Enter the service API container"
+	@echo '  mk manage SVC=... ARGS="..." - Run manage.py'
+	@echo "  mk makemigrations    - Run makemigrations"
+	@echo "  mk migrate           - Run migrate"
+	@echo "  mk showmigrations    - Show migrations"
+	@echo "  mk create-vertical   - Create a new vertical"
+	@echo "  mk reset-db SVC=...  - Fully reset the service database"
 
 build:
 	${COMPOSE} up -d --build ${ARGS}
