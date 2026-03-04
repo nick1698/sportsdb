@@ -183,66 +183,70 @@ CREATE INDEX IF NOT EXISTS ix_ps_presence__person_sport ON person_sport_presence
 CREATE INDEX IF NOT EXISTS ix_ps_presence__sport_vertical ON person_sport_presence (sport_key, vertical_entity_id);
 
 -- ============================================================
--- 8) INBOX (requests workflow)
+-- 8) INBOX (edit requests workflow)
 -- payload: jsonb
 -- status/action/entity_type are text with CHECK (easy to extend)
 -- Context fields:
---   sport_key optional (FK) + vertical_key/vertical_id optional
+--   sport_key optional (FK)
 --   (vertical_id here is an external id for the vertical system, not a FK)
 -- ============================================================
 CREATE TABLE
-    IF NOT EXISTS inbox_request (
+    IF NOT EXISTS edit_requests_inbox (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
-        entity_type text NOT NULL CHECK (
-            entity_type IN ('org', 'person', 'venue', 'geo_place')
+        entity_type varchar(16) NOT NULL CHECK (
+            entity_type IN ('Org', 'Person', 'Venue', 'Location')
         ),
-        action text NOT NULL CHECK (action IN ('create', 'update', 'merge')),
-        status text NOT NULL DEFAULT 'pending' CHECK (
-            status IN ('pending', 'approved', 'rejected', 'applied')
-        ),
-        -- Context (optional)
-        sport_key text REFERENCES sport (key),
-        vertical_id uuid, -- external vertical/system id (not FK)
-        vertical_key text, -- external vertical/system key
-        -- Target for update/merge (nullable for create)
-        target_entity_id uuid,
-        payload jsonb NOT NULL,
-        dedupe_key text,
-        -- Audit (can be nullable if auth not wired yet)
-        created_by_user_id uuid,
-        reviewed_by_user_id uuid,
-        ts_creation timestamptz NOT NULL DEFAULT now (),
-        ts_last_update timestamptz NOT NULL DEFAULT now (),
-        ts_reviewed timestamptz,
-        review_note text
-    );
-
-CREATE INDEX IF NOT EXISTS inbox_request_status_idx ON inbox_request (status, ts_creation);
-
-CREATE INDEX IF NOT EXISTS inbox_request_entity_idx ON inbox_request (entity_type, status);
-
-CREATE INDEX IF NOT EXISTS inbox_request_sport_idx ON inbox_request (sport_key);
-
-CREATE UNIQUE INDEX IF NOT EXISTS inbox_request_dedupe_uq ON inbox_request (dedupe_key)
-WHERE
-    dedupe_key IS NOT NULL;
-
-CREATE TABLE
-    IF NOT EXISTS inbox_request_event (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
-        request_id uuid NOT NULL REFERENCES inbox_request (id) ON DELETE CASCADE,
-        event_type text NOT NULL CHECK (
-            event_type IN (
-                'created',
-                'approved',
-                'rejected',
-                'applied',
-                'comment'
+        action varchar(16) NOT NULL CHECK (action IN ('Create', 'Update', 'Merge')),
+        status varchar(16) NOT NULL DEFAULT 'Pending' CHECK (
+            status IN (
+                'Pending',
+                'Approved',
+                'Rejected',
+                'Duplicate',
+                'Applied'
             )
         ),
-        payload jsonb,
-        ts_creation timestamptz NOT NULL DEFAULT now (),
-        ts_last_update timestamptz NOT NULL DEFAULT now ()
+        -- Context
+        sport_key varchar(64) REFERENCES sport (key),
+        vertical_entity_id uuid, -- external vertical/system id (not FK)
+        target_entity_id uuid, -- Target for update/merge + nullable for create
+        payload jsonb NOT NULL,
+        -- Audit (can be nullable if auth not wired yet)
+        created_by integer NOT NULL REFERENCES auth_user (id) ON DELETE RESTRICT,
+        finalised_by integer REFERENCES auth_user (id) ON DELETE SET NULL,
+        ts_taken_in_charge timestamptz,
+        ts_review_completed timestamptz,
+        review_notes text ts_creation timestamptz NOT NULL DEFAULT now (),
+        ts_last_update timestamptz NOT NULL DEFAULT now (),
     );
 
-CREATE INDEX IF NOT EXISTS inbox_event_req_idx ON inbox_request_event (request_id, ts_creation);
+CREATE INDEX ix_inbox_status_type ON edit_requests_inbox (status, entity_type);
+
+CREATE INDEX ix_inbox_sport ON edit_requests_inbox (sport_key);
+
+CREATE INDEX ix_inbox_target ON edit_requests_inbox (target_entity_id);
+
+CREATE INDEX ix_inbox_vertical_entity ON edit_requests_inbox (vertical_entity_id);
+
+CREATE TABLE
+    edit_requests_inbox_event (
+        id uuid PRIMARY KEY,
+        request_id uuid NOT NULL REFERENCES edit_requests_inbox (id) ON DELETE CASCADE,
+        event_type text NOT NULL CHECK (
+            event_type IN (
+                'Created',
+                'Reviewed',
+                'Approved',
+                'Rejected',
+                'Comment',
+                'Applied'
+            )
+        ),
+        actor integer NOT NULL REFERENCES auth_user (id) ON DELETE RESTRICT,
+        notes text,
+
+        ts_creation timestamptz NOT NULL,
+        ts_last_update timestamptz NOT NULL
+    );
+
+CREATE INDEX ix_inbox_event__req_type ON edit_requests_inbox_event (request_id, event_type);
