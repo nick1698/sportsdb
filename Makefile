@@ -65,15 +65,15 @@ manage:
 
 # e.g.: mk makemigrations SVC=[platform] {NAME=[test_migration] EMPTY=[1]}
 makemigrations:
-	$(COMPOSE) exec $(SVC)-api python manage.py makemigrations $(SVC)_api $(if $(NAME),--name $(NAME)) $(if $(EMPTY),--empty)
+	$(COMPOSE) exec $(SVC)-api python manage.py makemigrations $(SVC)_api $(if $(NAME),--name $(NAME)) $(if $(EMPTY),--empty) ${ARGS}
 
 # e.g.: mk migrate SVC=[platform] {TARGET=[0xxx]}
 migrate:
-	$(COMPOSE) exec $(SVC)-api python manage.py migrate $(SVC)_api $(TARGET)
+	$(COMPOSE) exec $(SVC)-api python manage.py migrate $(SVC)_api $(TARGET) ${ARGS}
 
 # e.g.: mk showmigrations SVC=[platform]
 showmigrations:
-	$(COMPOSE) exec $(SVC)-api python manage.py showmigrations
+	$(COMPOSE) exec $(SVC)-api python manage.py showmigrations ${ARGS}
 
 # e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:
