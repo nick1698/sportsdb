@@ -231,25 +231,28 @@ le tabelle di **presence** (mapping platform ↔ vertical DB), e il workflow di 
 
 #### 1.2 Core Identity (cross-sport)
 
-- [ ] `country`
-  - vincoli unique: `iso2`, `iso3`, `numeric_code`
-- [ ] `sport`
+- campi comuni:
+  - `ts_creation`, `ts_last_update`
+- [x] `country`
+  - PK: `iso2`
+  - vincoli unique: `iso3`, `numeric_code`
+- [x] `sport`
   - PK: `key` (slug immutabile)
-  - unique: `name_en`
-- [ ] `geo_place`
+  - `name_en`: display label
+- [x] `geo_place`
   - FK: `country_id`
   - self-FK: `parent_id`
   - coordinate coerenti (lat/lon entrambi null o entrambi valorizzati)
-- [ ] `venue`
+- [x] `venue`
   - FK: `country_id`
   - FK opzionale: `geo_place_id`
-  - coordinate coerenti
-- [ ] `org`
-  - `type` con mapping (MVP): `1=club`, `2=nation`
+  - coordinate coerenti (lat/lon entrambi null o entrambi valorizzati)
+- [x] `org`
+  - `type` con mapping (MVP): `1=nation`, `2=club`
   - FK: `country_id`
   - FK opzionale: `home_geo_place_id`
-- [ ] `person`
-  - `sex`: `0=unknown`, `1=male`, `2=female`, `3=other`
+- [x] `person`
+  - `sex`: `1=female`, `2=male`, `3=other`
   - FK: `primary_nationality_id` (NOT NULL)
   - FK opzionale: `sporting_nationality_id`
   - check: `death_date >= birth_date` se entrambe presenti
