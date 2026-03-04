@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 WORKDIR /app/backend
 EXPOSE 8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
