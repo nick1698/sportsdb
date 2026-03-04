@@ -278,18 +278,18 @@ Deliverable: inserimenti di presence + verifica vincoli unique + query semplici 
 
 #### 1.4 Inbox (governance MVP nel core)
 
-- [ ] `inbox_request`
+- [x] `inbox_request`
   - `entity_type`: `{org, person, venue, geo_place}`
   - `action`: `{create, update, merge}`
-  - `status`: `{pending, approved, rejected, applied}` (default pending)
-  - context opzionale: `sport_key`, `vertical_id`, `vertical_key`
-  - target opzionale: `target_entity_id` (nullable per create)
+  - `status`: `{pending, approved, rejected, duplicate, applied}` (default pending)
+  - context: `sport_key`, `vertical_id`
+  - target (opzionale: nullable per CREATE): `target_entity_id`
   - `payload jsonb NOT NULL`
-  - `dedupe_key` con unique parziale (solo se non null)
-  - audit fields (user_id, reviewed timestamps, review_note) anche se auth non è ancora integrata
-- [ ] `inbox_request_event`
-  - event log: `{created, approved, rejected, applied, comment}`
+  - audit fields (users, timestamps, notes)
+- [x] `inbox_request_event`
+  - event log: `{created, approved, rejected, applied, reviewed, comment}`
   - FK: `request_id` (cascade)
+  - `actor` (user che commette l'evento)
 
 Deliverable:
 
