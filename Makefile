@@ -4,7 +4,7 @@ COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 # service: platform | volley | football ...
 SVC ?= platform
 
-.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations create-vertical reset-db
+.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations test create-vertical reset-db
 
 help:
 	@echo "Available commands:"
@@ -74,6 +74,10 @@ migrate:
 # e.g.: mk showmigrations SVC=[platform]
 showmigrations:
 	$(COMPOSE) exec $(SVC)-api python manage.py showmigrations ${ARGS}
+
+# e.g.: mk test SVC=[platform]
+test:
+	$(COMPOSE) exec $(SVC)-api python manage.py test --shuffle --failfast ${ARGS}
 
 # e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:

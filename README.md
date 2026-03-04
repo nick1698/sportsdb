@@ -305,10 +305,10 @@ Deliverable:
 
 #### **Obiettivi finali**
 
-- [ ] Migrations applicate su Postgres senza errori
-- [ ] Seed `country` + `sport`
-- [ ] Presence funzionante (vincoli + query)
-- [ ] Inbox funzionante (request + events + listing)
+- [x] Migrations applicate su Postgres senza errori
+- [x] Testing models
+- [x] Presence funzionante (vincoli + query)
+- [x] Inbox funzionante (request + events + listing)
 
 ### Phase 2 — Fondamenta Identity nel core (senza inbox ancora completa)
 

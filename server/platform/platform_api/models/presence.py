@@ -8,6 +8,7 @@ from shared.utils.models import GrowingTable
 class OrgPresence(GrowingTable):
     """
     Mapping Core Org -> Vertical entity (per sport)
+
     One-to-many: the same Org can be present in many sports
     """
 
@@ -35,9 +36,7 @@ class OrgPresence(GrowingTable):
             )
         ]
         indexes = [
-            models.Index(
-                fields=["org", "sport"], name="ix_os_presence__org_sport"
-            ),
+            models.Index(fields=["org", "sport"], name="ix_os_presence__org_sport"),
             models.Index(
                 fields=["sport", "vertical_entity_id"],
                 name="ix_os_presence__sport_vertical",
@@ -51,6 +50,7 @@ class OrgPresence(GrowingTable):
 class PersonPresence(GrowingTable):
     """
     Mapping Core Person -> Vertical entity (per sport)
+
     One-to-many: the same Person can be present in multiple sports and in multiple roles in the same sport
     """
 
