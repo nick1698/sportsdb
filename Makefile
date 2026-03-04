@@ -63,13 +63,13 @@ enter:
 manage:
 	$(COMPOSE) exec $(SVC)-api python manage.py ${ARGS}
 
-# e.g.: mk makemigrations SVC=[platform] {APP=[platform_api] NAME=[test_migration] EMPTY=[1]}
+# e.g.: mk makemigrations SVC=[platform] {NAME=[test_migration] EMPTY=[1]}
 makemigrations:
-	$(COMPOSE) exec $(SVC)-api python manage.py makemigrations $(if $(APP),$(APP)) $(if $(NAME),--name $(NAME)) $(if $(EMPTY),--empty)
+	$(COMPOSE) exec $(SVC)-api python manage.py makemigrations $(SVC)_api $(if $(NAME),--name $(NAME)) $(if $(EMPTY),--empty)
 
-# e.g.: mk migrate SVC=[platform]
+# e.g.: mk migrate SVC=[platform] {TARGET=[0xxx]}
 migrate:
-	$(COMPOSE) exec $(SVC)-api python manage.py migrate
+	$(COMPOSE) exec $(SVC)-api python manage.py migrate $(SVC)_api $(TARGET)
 
 # e.g.: mk showmigrations SVC=[platform]
 showmigrations:
