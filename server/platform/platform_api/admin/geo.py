@@ -1,7 +1,9 @@
 from django.contrib import admin
+from django.db import models
+from django.forms import TextInput
 
 from platform_api.models import Country, GeoPlace, Venue
-from shared.utils.admin import FixedTableAdmin
+from shared.utils.admin import FixedTableAdmin, GrowingTableAdmin
 
 
 @admin.register(Country)
@@ -24,7 +26,7 @@ class CountryAdmin(FixedTableAdmin):
 
 
 @admin.register(GeoPlace)
-class GeoPlaceAdmin(FixedTableAdmin):
+class GeoPlaceAdmin(GrowingTableAdmin):
     list_display = ("name", "kind", "country", "parent", "timezone")
     list_filter = ("country", "kind")
     search_fields = ("name", "normalized_name")
@@ -47,12 +49,17 @@ class GeoPlaceAdmin(FixedTableAdmin):
 
 
 @admin.register(Venue)
-class VenueAdmin(FixedTableAdmin):
+class VenueAdmin(GrowingTableAdmin):
     list_display = ("name", "short_name", "country", "geo_place", "is_active")
     list_filter = ("country", "is_active")
     search_fields = ("name", "short_name", "address_line", "postal_code")
     autocomplete_fields = ("geo_place",)
     ordering = ("country", "name")
+
+    formfield_overrides = {
+        **FixedTableAdmin.formfield_overrides,
+        models.TextField: {"widget": TextInput(attrs={"size": 80})},
+    }
 
     fieldsets = (
         (

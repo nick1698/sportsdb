@@ -3,7 +3,7 @@ import uuid
 from django.db import models
 from django.db.models import Q
 
-from shared.utils.models import FixedTable
+from shared.utils.models import FixedTable, GrowingTable
 
 
 class Country(FixedTable):
@@ -84,7 +84,7 @@ class GeoPlaceKind(models.TextChoices):
     """
 
 
-class GeoPlace(FixedTable):
+class GeoPlace(GrowingTable):
     """
     Region, city, etc.
     """
@@ -153,7 +153,7 @@ class GeoPlace(FixedTable):
 # endregion
 
 
-class Venue(FixedTable):
+class Venue(GrowingTable):
     """
     Physical place used in sport
     """
@@ -183,8 +183,8 @@ class Venue(FixedTable):
         max_length=16, null=True, blank=True
     )  # NOTE: only nullable for MVP
 
-    lat = models.FloatField(null=True, blank=True)  # NOTE: only nullable for MVP
-    lon = models.FloatField(null=True, blank=True)  # NOTE: only nullable for MVP
+    lat = models.FloatField(null=True, blank=True, verbose_name="Latitude")  # NOTE: only nullable for MVP
+    lon = models.FloatField(null=True, blank=True, verbose_name="Longitude")  # NOTE: only nullable for MVP
 
     capacity = models.IntegerField(null=True, blank=True)  # NOTE: only nullable for MVP
     date_opening = models.DateField(
