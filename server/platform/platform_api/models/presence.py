@@ -27,7 +27,7 @@ class OrgPresence(GrowingTable):
 
     class Meta:
         db_table = "org_sport_presence"
-        verbose_name_plural = "Org-sport "
+        verbose_name_plural = "Org-sport mappings"
         constraints = [
             models.UniqueConstraint(
                 fields=["org", "sport", "vertical_entity_id"],
@@ -70,6 +70,7 @@ class PersonPresence(GrowingTable):
 
     class Meta:
         db_table = "person_sport_presence"
+        verbose_name_plural = "Person-sport mappings"
         constraints = [
             models.UniqueConstraint(
                 fields=["person", "sport", "vertical_entity_id"],
