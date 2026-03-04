@@ -263,15 +263,15 @@ Deliverable: CRUD/admin minimo per tutte le entità core, con vincoli e indici a
 
 > One-to-many ammesso: una `person`/`org` nel core può mapparsi a più record nel vertical.
 
-- [ ] `org_presence`
+- [x] `org_presence`
   - FK: `org_id` (cascade)
   - FK: `sport_key -> sport(key)`
-  - campi: `vertical_entity_id uuid`, `vertical_key text`
+  - campo verso i db vertical: `vertical_entity_id uuid`
   - unique: `(org_id, sport_key, vertical_entity_id)`
-- [ ] `person_presence`
+- [x] `person_presence`
   - FK: `person_id` (cascade)
   - FK: `sport_key -> sport(key)`
-  - campi: `vertical_entity_id uuid`, `vertical_key text`
+  - campo verso i db vertical: `vertical_entity_id uuid`
   - unique: `(person_id, sport_key, vertical_entity_id)`
 
 Deliverable: inserimenti di presence + verifica vincoli unique + query semplici per sport.
