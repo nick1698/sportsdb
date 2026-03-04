@@ -9,12 +9,12 @@ from .geo import Country, GeoPlace
 
 class Sport(GrowingTable):
     key = models.CharField(primary_key=True, max_length=64)  # immutable slug
-    name_en = models.CharField(max_length=128)  # display label (can evolve, key should not)
+    name_en = models.CharField(max_length=128, verbose_name="name (eng)")  # display label (can evolve, key should not)
     description = models.TextField(
         null=True, blank=True, verbose_name="Brief description"
     )
     rules = models.TextField(
-        null=True, blank=True, verbose_name="NOTE: preferably in English"
+        null=True, blank=True, help_text="NOTE: Preferably in English"
     )
 
     class Meta:
@@ -77,8 +77,8 @@ class Org(GrowingTable):
 
 
 class Sex(models.IntegerChoices):
-    FEMALE = 1, "female"
-    MALE = 2, "male"
+    FEMALE = 1, "F"
+    MALE = 2, "M"
     OTHER = 3, "other"  # NOTE: meaning it's not relevant (e.g. not for athletes)
     # TODO: servirà una migrazione manuale quando i valori saranno "definitivi" (vedi GeoPlaceKind)
 
@@ -94,7 +94,7 @@ class Person(GrowingTable):
     family_name = models.CharField(max_length=128)
     nickname = models.CharField(max_length=128, null=True, blank=True)
 
-    sex = models.SmallIntegerField(choices=Sex.choices)
+    sex = models.SmallIntegerField(choices=Sex.choices, default=Sex.FEMALE.value)
 
     birth_date = models.DateField(null=True, blank=True)  # NOTE: only nullable for MVP
     birth_place = models.ForeignKey(
