@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.db import models
+from django.forms import NumberInput, TextInput
 
 
 class TimestampAdminMixin:
@@ -24,7 +26,10 @@ class TimestampAdminMixin:
 
 
 class BaseTableAdmin(TimestampAdminMixin, admin.ModelAdmin):
-    pass
+    formfield_overrides = {
+        models.TextField: {"widget": TextInput(attrs={"size": 80})},
+        models.FloatField: {"widget": NumberInput(attrs={"style": "width: 8em;"})},
+    }
 
 
 class FixedTableAdmin(BaseTableAdmin):

@@ -104,7 +104,7 @@ class GeoPlace(FixedTable):
         blank=True,
         db_column="parent_id",
         related_name="children",
-        verbose_name="Overstructure geo place"
+        verbose_name="Broader area"
     )
 
     name = models.CharField(max_length=128)
@@ -173,6 +173,7 @@ class Venue(FixedTable):
         blank=True,
         db_column="geo_place_id",
         related_name="venues",
+        verbose_name="location"
     )  # NOTE: only nullable for MVP
 
     address_line = models.TextField(
