@@ -300,8 +300,8 @@ Deliverable:
 
 #### 1.5 Timestamp policy
 
-- [ ] Tutte le tabelle: `ts_creation`, `ts_last_update` default `now()`
-- [ ] (Opzionale in Phase 1) trigger/logic per aggiornare `ts_last_update` su UPDATE
+- [x] Tutte le tabelle: `ts_creation`, `ts_last_update` default `now()`
+- [x] logic per aggiornare `ts_last_update` su UPDATE
 
 #### **Obiettivi finali**
 
