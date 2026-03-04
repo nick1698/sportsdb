@@ -75,8 +75,9 @@ migrate:
 showmigrations:
 	$(COMPOSE) exec $(SVC)-api python manage.py showmigrations
 
+# e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:
-	@bash server/scripts/create_vertical.sh
+	@server/scripts/bin/create-vertical $(SVC)
 
 # e.g.: mk reset-db SVC=[platform]
 reset-db:
