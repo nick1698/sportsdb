@@ -1,6 +1,7 @@
 import uuid
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Q, F
 from shared.utils.models import GrowingTable
 
 
@@ -80,7 +81,24 @@ class EditRequestsInbox(GrowingTable):
 
     class Meta:
         db_table = "edit_requests_inbox"
-        verbose_name_plural = "Edit requests inbox"
+        verbose_name = "edit request"
+        verbose_name_plural = "edit requests inbox"
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(ts_review_completed__isnull=True)
+                    | Q(ts_taken_in_charge__isnull=True)
+                    | Q(ts_review_completed__gt=F("ts_taken_in_charge"))
+                ),
+                name="ck_inbox_review_completed_after_taken_in_charge",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(action=RequestedAction.CREATE) | Q(target_entity_id__isnull=False)
+                ),
+                name="ck_inbox_target_required_for_update_merge",
+            ),
+        ]
         indexes = [
             models.Index(fields=["status", "entity_type"], name="ix_inbox_status_type"),
             models.Index(fields=["sport"], name="ix_inbox_sport"),
@@ -92,6 +110,20 @@ class EditRequestsInbox(GrowingTable):
 
     def __str__(self):
         return f"InboxRequest({self.action} {self.entity_type}: {self.status})"
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+
+        def create_created_event():
+            EditRequestsInboxEvent.objects.get_or_create(
+                request=self,
+                event_type=EventType.CREATED,
+                defaults={"actor": self.created_by},
+            )
+
+        if is_new:
+            transaction.on_commit(create_created_event)
 
 
 class EventType(models.TextChoices):
