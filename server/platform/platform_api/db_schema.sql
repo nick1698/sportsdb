@@ -149,48 +149,38 @@ CREATE INDEX IF NOT EXISTS idx_person_primary_nat ON person (primary_nationality
 --
 -- IMPORTANT: one-to-many mapping allowed:
 --   platform person/org can map to multiple entities in the same vertical DB
--- So UNIQUE is on (platform_entity_id, sport_key, vertical_entity_id).
 --
 -- vertical_entity_id: UUID of the entity in the vertical DB.
--- vertical_key: textual identifier of the vertical (optional but useful for debugging/logging).
 -- ============================================================
 CREATE TABLE
-    IF NOT EXISTS org_presence (
+    IF NOT EXISTS org_sport_presence (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
         org_id uuid NOT NULL REFERENCES org (id) ON DELETE CASCADE,
-        sport_key text NOT NULL REFERENCES sport (key),
-        vertical_entity_id uuid NOT NULL, -- UUID in vertical DB
-        vertical_key text NOT NULL, -- e.g. 'volleyball' (or any vertical identifier)
-        is_active boolean NOT NULL DEFAULT true,
+        sport_key varchar(64) NOT NULL REFERENCES sport (key) ON DELETE RESTRICT,
+        vertical_entity_id uuid NOT NULL,
         ts_creation timestamptz NOT NULL DEFAULT now (),
         ts_last_update timestamptz NOT NULL DEFAULT now (),
-        CONSTRAINT org_presence_uq UNIQUE (org_id, sport_key, vertical_entity_id)
+        CONSTRAINT uq_os_presence__org_sport_vertical UNIQUE (org_id, sport_key, vertical_entity_id)
     );
 
-CREATE INDEX IF NOT EXISTS org_presence_sport_idx ON org_presence (sport_key);
+CREATE INDEX IF NOT EXISTS ix_os_presence__org_sport ON org_sport_presence (org_id, sport_key);
 
-CREATE INDEX IF NOT EXISTS org_presence_vertical_key_idx ON org_presence (vertical_key);
-
-CREATE INDEX IF NOT EXISTS org_presence_org_idx ON org_presence (org_id);
+CREATE INDEX IF NOT EXISTS ix_os_presence__sport_vertical ON org_sport_presence (sport_key, vertical_entity_id);
 
 CREATE TABLE
-    IF NOT EXISTS person_presence (
+    IF NOT EXISTS person_sport_presence (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
         person_id uuid NOT NULL REFERENCES person (id) ON DELETE CASCADE,
-        sport_key text NOT NULL REFERENCES sport (key),
-        vertical_entity_id uuid NOT NULL, -- UUID in vertical DB
-        vertical_key text NOT NULL, -- e.g. 'volleyball'
-        is_active boolean NOT NULL DEFAULT true,
+        sport_key varchar(64) NOT NULL REFERENCES sport (key) ON DELETE RESTRICT,
+        vertical_entity_id uuid NOT NULL,
         ts_creation timestamptz NOT NULL DEFAULT now (),
         ts_last_update timestamptz NOT NULL DEFAULT now (),
-        CONSTRAINT person_presence_uq UNIQUE (person_id, sport_key, vertical_entity_id)
+        CONSTRAINT uq_ps_presence__person_sport_vertical UNIQUE (person_id, sport_key, vertical_entity_id)
     );
 
-CREATE INDEX IF NOT EXISTS person_presence_sport_idx ON person_presence (sport_key);
+CREATE INDEX IF NOT EXISTS ix_ps_presence__person_sport ON person_sport_presence (person_id, sport_key);
 
-CREATE INDEX IF NOT EXISTS person_presence_vertical_key_idx ON person_presence (vertical_key);
-
-CREATE INDEX IF NOT EXISTS person_presence_person_idx ON person_presence (person_id);
+CREATE INDEX IF NOT EXISTS ix_ps_presence__sport_vertical ON person_sport_presence (sport_key, vertical_entity_id);
 
 -- ============================================================
 -- 8) INBOX (requests workflow)

@@ -1,5 +1,6 @@
 from .geo import Country, GeoPlace, Venue
 from .entities import Sport, Org, Person
+from .presence import OrgPresence, PersonPresence
 
 __all__ = [
     "Country",
@@ -8,4 +9,6 @@ __all__ = [
     "Venue",
     "Org",
     "Person",
+    "OrgPresence",
+    "PersonPresence",
 ]
