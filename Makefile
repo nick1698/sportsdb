@@ -3,8 +3,10 @@ COMPOSE = docker compose --env-file .env -f $(COMPOSE_DEV)
 
 # service: platform | volley | football ...
 SVC ?= platform
+# endpoint
+EP ?= health
 
-.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations test create-vertical reset-db
+.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations test-code test-ep create-vertical reset-db
 
 help:
 	@echo "Available commands:"
@@ -75,9 +77,13 @@ migrate:
 showmigrations:
 	$(COMPOSE) exec $(SVC)-api python manage.py showmigrations ${ARGS}
 
-# e.g.: mk test SVC=[platform]
-test:
+# e.g.: mk test-code SVC=[platform]
+test-code:
 	$(COMPOSE) exec $(SVC)-api python manage.py test --shuffle --failfast ${ARGS}
+
+# e.g.: mk test-ep EP=[health]
+test-ep:
+	curl -i -H "Host: platform.localtest.me" http://localhost/api/${EP}
 
 # e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:
