@@ -1,7 +1,11 @@
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
+
+from ninja import Schema
 from ninja.errors import ValidationError, HttpError
+from pydantic import Field
+from typing import Generic, List, Optional, Tuple, TypeVar
 
 from .codes import ErrorCode
 from .errors import ApiError, error_payload
@@ -83,3 +87,48 @@ def handle_permission_denied(request, exc: PermissionDenied):
         code=ErrorCode.FORBIDDEN, message="Forbidden", status=403, details=[]
     )
     return JsonResponse(error_payload(err, rid), status=err.status)
+
+
+# region LIST CONTRACT + STANDARD QUERY PARAMS
+
+T = TypeVar("T")
+
+
+class ListEnvelope(Schema, Generic[T]):
+    items: List[T]
+    limit: int = Field(ge=1, le=200)
+    offset: int = Field(ge=0)
+    total: int = Field(ge=0)
+    sort: Optional[str] = None
+
+
+class ListQueryParams(Schema):
+    limit: int = Field(50, ge=1, le=200)
+    offset: int = Field(0, ge=0)
+    sort: Optional[str] = None
+
+
+def apply_sort(qs, sort: Optional[str], allowed: set[str], default: str) -> tuple:
+    """
+    sort examples:
+      - "name_en"
+      - "-name_en"
+    """
+    if not sort:
+        return qs.order_by(default), default
+
+    field = sort[1:] if sort.startswith("-") else sort
+    if field not in allowed:
+        # MVP: fallback safe e deterministico
+        return qs.order_by(default), default
+
+    return qs.order_by(sort), sort
+
+
+def paginate(qs, limit: int, offset: int) -> Tuple[list, int]:
+    total = qs.count()
+    items = list(qs[offset : offset + limit])  # noqa: E203
+    return items, total
+
+
+# endregion
