@@ -66,7 +66,6 @@ def list_sports(request, q: ListQueryParams = Query(...)):
     qs, sort_used = apply_sort(
         qs, q.sort, allowed={"key", "name_en"}, default="name_en"
     )
-    total = qs.count()
     items, total = paginate(qs, q.limit, q.offset)
     return {
         "items": items,

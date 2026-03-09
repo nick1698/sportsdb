@@ -49,7 +49,6 @@ def list_locations(
         allowed={"name", "normalized_name", "kind", "country_id"},
         default="normalized_name",
     )
-    total = qs.count()
     items, total = paginate(qs, q.limit, q.offset)
     return {
         "items": items,
