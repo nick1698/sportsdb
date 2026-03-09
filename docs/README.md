@@ -172,12 +172,21 @@ repo/
       10_platform.sql
       verticals/
         _index_.sql
+        volley.sql
+        football.sql
         ...
+
   server/
     platform/                   # Django project + apps core (registry, identity, inbox, auth)
       Dockerfile.dev
       manage.py
       platform_api/
+        admin/
+        management/
+        migrations/
+        models/
+        routers/
+        tests/
       platform_service/
     shared/                     # solo tecnico: contracts, errors, observability, utils
       pyproject.toml
@@ -187,6 +196,11 @@ repo/
         factory.py
         ninja.py
         request_id.py
+        routing.py
+        testing.py
+      utils/
+        admin.py
+        models.py
     scripts/
       bin/
         create-vertical         # usato per creare vertical from scratch
@@ -335,19 +349,22 @@ Deliverable:
 
 ##### Countries
 
-- [ ] `GET /countries` (list, paginated)
-- [ ] `GET /countries/{iso2}` (detail)
+- [x] `GET /countries` (list, paginated)
+- [x] `GET /countries/{iso2}` (detail)
 
 ##### Sports
 
-- [ ] `GET /sports` (list)
-- [ ] `GET /sports/{key}` (detail)
+- [x] `GET /sports` (list)
+- [x] `GET /sports/{key}` (detail)
 
 ##### Geo Places
 
-- [ ] `GET /geo-places` (list)
-- [ ] `GET /geo-places/{id}` (detail)
-- [ ] Filtri minimi: `?country_id=...`
+- [x] `GET /geo-places` (envelope + paginazione)
+- [x] `GET /geo-places/{id}` (404 se missing)
+- [x] Filtro: `?country_id=...` (ISO2)
+- [x] Sorting: `?sort=normalized_name` (default) e `?sort=-normalized_name`
+- [x] Test: list (paginazione + filtro), detail (404)
+- [x] Smoke via Traefik (curl con Host)
 
 ##### Venues
 

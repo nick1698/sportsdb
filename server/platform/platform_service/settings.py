@@ -130,3 +130,8 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+SHELL_PLUS_IMPORTS = [
+    "from shared.api_contract import BaseRoute",
+    "from platform_api.routers import PlatformRoute"
+]
