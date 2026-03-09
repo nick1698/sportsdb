@@ -1,13 +1,15 @@
 from django.db import connection
 from django.http import JsonResponse
 
-from shared.api_contract.factory import build_api
 from shared.api_contract.errors import ApiError, error_payload
+from shared.api_contract.factory import build_api
 
 from .routers.public_core import router as public_core_router
+from .routers.public_geo import router as public_geo_router
 
 api = build_api(title="Platform API")
-api.add_router("", public_core_router)
+api.add_router("/core", public_core_router)
+api.add_router("/geo", public_geo_router)
 
 
 @api.get("/health")
