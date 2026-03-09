@@ -25,6 +25,8 @@ help:
 	@echo "  mk makemigrations    - Run makemigrations"
 	@echo "  mk migrate           - Run migrate"
 	@echo "  mk showmigrations    - Show migrations"
+	@echo "  mk test-code SVC=... - Python tests"
+	@echo "  mk test-ep EP=...    - Endpoints testing"
 	@echo "  mk create-vertical   - Create a new vertical"
 	@echo "  mk reset-db SVC=...  - Fully reset the service database"
 
