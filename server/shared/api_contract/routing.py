@@ -2,9 +2,9 @@ from urllib.parse import urlencode, urljoin
 
 
 class TableUrlConfig:
-    router = "/"
-    table_ep = ""
-    pk = "id"
+    router: str
+    table_ep: str
+    pk: str
 
     def __init__(self, router, table_ep, pk="id"):
         self.router = router
@@ -19,7 +19,7 @@ class BaseRoute:
     def __init__(self, t: type):
         self.t = t
         if self.t not in self.TABLES_URLS.keys():
-            self.TABLES_URLS[self.t] = TableUrlConfig()
+            self.TABLES_URLS[self.t] = TableUrlConfig("/", "")
 
     @property
     def short(self):
