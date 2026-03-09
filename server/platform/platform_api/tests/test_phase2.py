@@ -2,7 +2,7 @@ from http import HTTPStatus
 import uuid
 from django.test import TestCase
 
-from shared.api_contract.testing import assert_list_envelope
+from server.shared.utils.testing import assert_list_envelope
 
 from platform_api.models.geo import Country, GeoPlace
 from platform_api.models.entities import Sport

@@ -13,7 +13,6 @@ from .ninja import (
     paginate,
 )
 from .request_id import RequestIdMiddleware
-from .routing import BaseRoute
 
 __all__ = [
     "ErrorCode",
@@ -30,5 +29,4 @@ __all__ = [
     "apply_sort",
     "paginate",
     "RequestIdMiddleware",
-    "BaseRoute",
 ]

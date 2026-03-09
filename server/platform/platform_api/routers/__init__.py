@@ -1,4 +1,4 @@
-from shared.api_contract.routing import BaseRoute, TableUrlConfig
+from server.shared.utils.routing import BaseRoute, TableUrlConfig
 
 from platform_api.models.entities import Sport
 from platform_api.models.geo import Country, GeoPlace
