@@ -381,12 +381,12 @@ Deliverable: GeoPlace interrogabile pubblicamente con contratto coerente a count
 
 **Scope:** `venue`, `org`, `person`
 
-- [ ] `GET /api/core/venues` + detail
-- [ ] `GET /api/core/orgs` + detail
-- [ ] `GET /api/core/persons` + detail
-- [ ] Filtri minimi per `venue`
-- [ ] Filtri minimi per `org`
-- [ ] Filtri minimi per `person`
+- [x] `GET /api/core/venues` + detail
+- [x] `GET /api/core/orgs` + detail
+- [x] `GET /api/core/persons` + detail
+- [x] Filtri minimi per `venue`
+- [x] Filtri minimi per `org`
+- [x] Filtri minimi per `person`
 
 Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 

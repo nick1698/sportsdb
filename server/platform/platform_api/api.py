@@ -6,10 +6,12 @@ from shared.api_contract.factory import build_api
 
 from .routers.public_core import router as public_core_router
 from .routers.public_geo import router as public_geo_router
+from .routers.public_people import router as public_people_router
 
 api = build_api(title="Platform API")
 api.add_router("/core", public_core_router)
 api.add_router("/geo", public_geo_router)
+api.add_router("/people", public_people_router)
 
 
 @api.get("/health")
