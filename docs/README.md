@@ -351,7 +351,7 @@ Deliverable:
 
 - [x] Definire standard paginazione (`limit` + `offset`) e applicarlo agli endpoint read-only iniziali
 - [x] Definire standard sorting (`?sort=field`, `?sort=-field`) e applicarlo agli endpoint read-only iniziali
-- [ ] Definire schema errori API (404/400/422) e messaggi coerenti
+- [x] Definire schema errori API (404/400/422) e messaggi coerenti
 - [x] Definire naming stabile per endpoint tramite helper condivisi in `shared.api_contract.routing`
 
 #### 7.2.1 - API pubbliche read-only baseline

@@ -1,21 +1,19 @@
+from pydantic import Field
+from typing import Generic, List, Optional, Tuple, TypeVar
+
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 
 from ninja import Schema
 from ninja.errors import ValidationError, HttpError
-from pydantic import Field
-from typing import Generic, List, Optional, Tuple, TypeVar
 
 from .codes import ErrorCode
-from .errors import ApiError, error_payload
+from .errors import ApiError, ApiErrorException, error_payload
 
 
 def _request_id(request) -> str:
-    # Set by RequestIdMiddleware; fallback for safety
-    return getattr(request, "request_id", None) or request.META.get(
-        "HTTP_X_REQUEST_ID", "unknown"
-    )
+    return getattr(request, "request_id", None) or request.META.get("HTTP_X_REQUEST_ID")
 
 
 def handle_validation_error(request, exc: ValidationError):
@@ -69,7 +67,8 @@ def handle_http_error(request, exc: HttpError):
         404: ErrorCode.NOT_FOUND,
     }.get(status, ErrorCode.BAD_REQUEST)
 
-    err = ApiError(code=code, message=str(exc), status=status, details=[])
+    msg = str(exc) or "Request error"
+    err = ApiError(code=code, message=msg, status=status, details=[])
     return JsonResponse(error_payload(err, rid), status=err.status)
 
 
@@ -86,6 +85,12 @@ def handle_permission_denied(request, exc: PermissionDenied):
     err = ApiError(
         code=ErrorCode.FORBIDDEN, message="Forbidden", status=403, details=[]
     )
+    return JsonResponse(error_payload(err, rid), status=err.status)
+
+
+def handle_api_error(request, exc: ApiErrorException):
+    rid = _request_id(request)
+    err = exc.error
     return JsonResponse(error_payload(err, rid), status=err.status)
 
 
@@ -119,8 +124,21 @@ def apply_sort(qs, sort: Optional[str], allowed: set[str], default: str) -> tupl
 
     field = sort[1:] if sort.startswith("-") else sort
     if field not in allowed:
-        # MVP: fallback safe e deterministico
-        return qs.order_by(default), default
+        raise ApiErrorException(
+            ApiError(
+                code=ErrorCode.BAD_REQUEST,
+                message="Invalid sort field",
+                status=400,
+                details=[
+                    {
+                        "field": "sort",
+                        "issue": f"Unsupported sort field '{sort}'",
+                        "type": "invalid_choice",
+                        "value": sort,
+                    }
+                ],
+            )
+        )
 
     return qs.order_by(sort), sort
 
