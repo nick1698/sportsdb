@@ -224,9 +224,20 @@ repo/
     architecture.md
 ```
 
-## 6. Roadmap operativa
+## 6. Routing API condiviso
 
-### Phase 0 — Bootstrap repo e dev environment
+Per evitare URL hardcoded nei router e nei test, il progetto usa helper condivisi in `server/shared/api_contract/routing.py`.
+
+Pattern attuale:
+
+- `BaseRoute` + `TableUrlConfig` per mappare `model -> router prefix + table endpoint + pk`
+- `PlatformRoute(Model)` per i path del platform
+
+Questa è la convenzione preferita del progetto per costruire e riusare gli URL API.
+
+## 7. Roadmap operativa
+
+### 7.0 — Bootstrap repo e dev environment
 
 - [x] Monorepo skeleton (backend/ui/infra/docs).
 - [x] Docker Compose dev:
@@ -241,7 +252,7 @@ Deliverable:
 - [x] DB up
 - [ ] logging coerente
 
-### Phase 1 — Platform DB (Core Identity + Presence + Inbox)
+### 7.1 — Platform DB (Core Identity + Presence + Inbox)
 
 **Obiettivo:** creare il _Platform DB_ Postgres con le entità **cross-sport** (country/sport/geo/venue/org/person),
 le tabelle di **presence** (mapping platform ↔ vertical DB), e il workflow di **Inbox** per richieste `create/update/merge`.
@@ -332,185 +343,93 @@ Deliverable:
 - [x] Presence funzionante (vincoli + query)
 - [x] Inbox funzionante (request + events + listing)
 
-### Phase 2 — Core Identity “consumabile” (API read-only + search + alias + hard-refs)
+### 7.2 — Core Identity “consumabile” (API read-only + search + alias + hard-refs)
 
-**Goal:** rendere le entità core (Org/Person/Geo/Venue) interrogabili e riusabili: endpoint pubblici read-only, ricerca base, alias, e un primo strato di regole “hard refs” per evitare riferimenti orfani/inconsistenti dai vertical.
+**Obiettivo:** rendere le entità core (Org/Person/Geo/Venue) interrogabili e riusabili: endpoint pubblici read-only, ricerca base, alias, e un primo strato di regole “hard refs” per evitare riferimenti orfani/inconsistenti dai vertical.
 
-#### 2.0 Prerequisiti e definizioni
+#### 7.2.0 - Prerequisiti e definizioni
 
-- [x] Definire standard paginazione (limit/offset oppure cursor) e applicarlo ovunque
-- [x] Definire standard sorting (`?sort=field`, `?sort=-field`) e applicarlo ovunque
+- [x] Definire standard paginazione (`limit` + `offset`) e applicarlo agli endpoint read-only iniziali
+- [x] Definire standard sorting (`?sort=field`, `?sort=-field`) e applicarlo agli endpoint read-only iniziali
 - [ ] Definire schema errori API (404/400/422) e messaggi coerenti
-- [ ] Definire naming stabile per endpoint (plural, kebab-case, ecc.)
+- [x] Definire naming stabile per endpoint tramite helper condivisi in `shared.api_contract.routing`
 
-#### 2.1 API pubbliche read-only (list + detail)
+#### 7.2.1 - API pubbliche read-only baseline
 
-**Scope:** `country`, `sport`, `geo_place`, `venue`, `org`, `person` (+ presence read-only)
+**Scope iniziale:** `country`, `sport`
 
-##### Countries
+- [x] `GET /api/core/countries` (list, paginated)
+- [x] `GET /api/core/countries/{iso2}` (detail, 404 se missing)
+- [x] `GET /api/core/sports` (list, paginated)
+- [x] `GET /api/core/sports/{key}` (detail, 404 se missing)
 
-- [x] `GET /countries` (list, paginated)
-- [x] `GET /countries/{iso2}` (detail)
+Deliverable: pattern API read-only stabile e riusabile per entità core semplici.
 
-##### Sports
+#### 7.2.2 - Geo API read-only
 
-- [x] `GET /sports` (list)
-- [x] `GET /sports/{key}` (detail)
+**Scope iniziale:** `geo_place`
 
-##### Geo Places
+- [x] `GET /api/geo/locations` (list, paginated)
+- [x] `GET /api/geo/locations/{id}` (detail, 404 se missing)
+- [x] Filtro minimo: `?country_id=...`
+- [x] Sorting minimo
+- [x] Test list/detail/filter
 
-- [x] `GET /geo-places` (envelope + paginazione)
-- [x] `GET /geo-places/{id}` (404 se missing)
-- [x] Filtro: `?country_id=...` (ISO2)
-- [x] Sorting: `?sort=normalized_name` (default) e `?sort=-normalized_name`
-- [x] Test: list (paginazione + filtro), detail (404)
-- [x] Smoke via Traefik (curl con Host)
+Deliverable: GeoPlace interrogabile pubblicamente con contratto coerente a countries/sports.
 
-##### Venues
+#### 7.2.3 - Core entities read-only successive
 
-- [ ] `GET /venues` (list)
-- [ ] `GET /venues/{id}` (detail)
-- [ ] Filtri minimi: `?country_id=...`, `?geo_place_id=...`
+**Scope:** `venue`, `org`, `person`
 
-##### Orgs
+- [ ] `GET /api/core/venues` + detail
+- [ ] `GET /api/core/orgs` + detail
+- [ ] `GET /api/core/persons` + detail
+- [ ] Filtri minimi per `venue`
+- [ ] Filtri minimi per `org`
+- [ ] Filtri minimi per `person`
 
-- [ ] `GET /orgs` (list)
-- [ ] `GET /orgs/{id}` (detail)
-- [ ] Filtri minimi: `?country_id=...`, `?type=...`
+Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 
-##### Persons
+#### 7.2.4 - Search MVP
 
-- [ ] `GET /persons` (list)
-- [ ] `GET /persons/{id}` (detail)
-- [ ] Filtri minimi: `?primary_nationality_id=...`, `?sex=...`, `?birth_year=...` (derivato)
+- [ ] `GET /api/core/search/orgs?q=...`
+- [ ] `GET /api/core/search/persons?q=...`
+- [ ] Ranking semplice e deterministico (`exact > startswith > contains`)
 
-##### Presences (read-only)
+#### 7.2.5 - Alias nel core
 
-- [ ] `GET /orgs/{id}/presences`
-- [ ] `GET /persons/{id}/presences`
-- [ ] `GET /presences/org?sport_key=...`
-- [ ] `GET /presences/person?sport_key=...`
+- [ ] `OrgAlias`
+- [ ] `PersonAlias`
+- [ ] eventuale `VenueAlias`
+- [ ] Search che include alias
 
-#### 2.2 Search MVP (semplice, deterministica, utile)
+#### 7.2.6 - Presences read-only
 
-**Nota:** niente “magic ranking”; regole chiare e stabili.
+- [ ] `GET /api/core/orgs/{id}/presences`
+- [ ] `GET /api/core/persons/{id}/presences`
+- [ ] listing filtrabili per `sport_key`
 
-- [ ] `GET /search/orgs?q=...`
-- [ ] `GET /search/persons?q=...`
-- [ ] (Opzionale) `GET /search/venues?q=...`
+#### 7.2.7 - Hard-refs per vertical
 
-Regole MVP:
+- [ ] Documentare il contratto minimo platform ↔ vertical
+- [ ] Definire cosa è hard-ref vs soft-ref
+- [ ] Eventuali endpoint minimi di validate
 
-- [ ] Match case-insensitive su name/nickname/alias
-- [ ] Ranking grezzo ma stabile: exact > startswith > contains
-- [ ] Limitare risultati (es. 20 default) + paginazione
+#### 7.2.8 - Testing
 
-DB/Index:
+- [x] Test list/detail per `countries`
+- [x] Test list/detail per `sports`
+- [x] Test list/detail/filter per `locations`
+- [ ] Test per `venues`
+- [ ] Test per `orgs`
+- [ ] Test per `persons`
+- [ ] Test search
+- [ ] Test alias
+- [ ] Test presences
 
-- [ ] Aggiungere indici minimi su campi usati in search (name + alias)
-- [ ] (Opzionale) Pianificare `pg_trgm` per fase successiva se serve
+Deliverable: il vertical può referenziare identity core in modo sicuro e il pubblico può consultare i dati base in read-only.
 
-#### 2.3 Alias nel core (Org/Person/Venue)
-
-**Perché:** dedup, search, UX (es. “Barça”, “FC Barcelona”, “Barcelona”).
-
-- [ ] Model & table `OrgAlias` (org_id, alias, lang, is_primary, timestamps)
-- [ ] Model & table `PersonAlias` (person_id, alias, lang, is_primary, timestamps)
-- [ ] (Opzionale) Model & table `VenueAlias`
-
-Vincoli:
-
-- [ ] Unique `(org_id, alias)` e `(person_id, alias)` (case-insensitive se possibile)
-- [ ] Al massimo un alias `is_primary=true` per entity
-- [ ] Index su `alias` per search
-
-API (read-only per Phase 2):
-
-- [ ] `GET /orgs/{id}/aliases`
-- [ ] `GET /persons/{id}/aliases`
-- [ ] (Opzionale) `GET /venues/{id}/aliases`
-
-#### 2.4 Hard-refs per vertical (contratto minimo)
-
-**Goal:** definire regole per riferimenti da vertical → platform per evitare dati “orfani”.
-
-- [ ] Definire convenzione `vertical_id` / `local_ref` nelle presence (se già decisa, documentarla)
-- [ ] Vincoli DB: (sport_key + vertical_id) indicizzabili, senza falsi unique indesiderati
-- [ ] Documentare cosa è “hard-ref” vs “soft-ref” (link garantito vs best-effort)
-- [ ] Endpoint di verifica (opzionale ma utile):
-  - [ ] `GET /validate/org-presence?sport_key=...&vertical_id=...`
-  - [ ] `GET /validate/person-presence?sport_key=...&vertical_id=...`
-
-#### 2.5 Admin ergonomics (operativo per lavoro manuale)
-
-- [ ] List display chiari (id, name, country, ts_last_update)
-- [ ] Search fields utili (name + alias)
-- [ ] Filtri laterali (country, type, sport_key)
-- [ ] Fieldsets coerenti e leggibili
-- [ ] Inline alias nelle pagine Org/Person (se gestiti in admin)
-
-#### 2.6 Testing (Phase 2)
-
-- [ ] Test API list/detail per ogni entità
-- [ ] Test filtri/paginazione/sorting (almeno 1 per resource)
-- [ ] Test search ranking (exact > startswith > contains) con dataset minimo
-- [ ] Test vincoli alias (unique + primary unico)
-- [ ] Test presence read-only e filtri per sport_key
-
-#### Roadmap
-
-##### Step 2.1 — Baseline API contracts
-
-- [x] Scegliere standard paginazione + sorting + error schema
-- [x] Implementare list/detail per `countries` e `sports` (più semplici)
-- [x] Aggiungere test base per list/detail
-
-##### Step 2.2 — Core entities read-only
-
-- [ ] Implementare `geo-places` + filtri minimi
-- [ ] Implementare `venues` + filtri minimi
-- [ ] Implementare `orgs` + filtri minimi
-- [ ] Implementare `persons` + filtri minimi
-- [ ] Test per filtri/paginazione/sorting
-
-##### Step 2.3 — Presences read-only
-
-- [ ] Endpoints presences per org/person
-- [ ] Endpoints presences filtrate per sport_key
-- [ ] Test dedicati presences
-
-##### Step 2.4 — Alias
-
-- [ ] Creare models/tables alias + migrazioni
-- [ ] Aggiornare admin con inline alias
-- [ ] Aggiungere endpoints alias read-only
-- [ ] Aggiornare search per includere alias
-- [ ] Test vincoli alias + search con alias
-
-##### Step 2.5 — Search MVP
-
-- [ ] Implementare /search/orgs e /search/persons
-- [ ] Implementare ranking deterministico
-- [ ] Aggiungere indici minimi
-- [ ] Test ranking
-
-##### Step 2.6 — Hard-refs contract (doc + min validation)
-
-- [ ] Scrivere sezione README “Hard refs & presence contract”
-- [ ] Aggiungere eventuali indici/vincoli
-- [ ] (Opzionale) endpoint validate
-- [ ] Test validate (se implementato)
-
-##### Definition of Done (Phase 2)
-
-- [ ] Tutti gli endpoint read-only core funzionano con paginazione/sorting/filtri minimi
-- [ ] Search MVP funzionante (org/person) e coperta da test
-- [ ] Alias modellati + admin usabile + search include alias
-- [ ] Presences read-only complete e indicizzate
-- [ ] README aggiornato con contratti e convenzioni
-- [ ] Test suite verde e stabile (run con `--shuffle`)
-
-### Phase 3 — Inbox identity (governance) + UI piattaforma
+### 7.3 — Inbox identity (governance) + UI piattaforma
 
 - Modello InboxRequest + stati unificati.
 - Workflow: create/link/merge/reject.
@@ -520,7 +439,7 @@ API (read-only per Phase 2):
 
 Deliverable: pipeline completa di proposta→review→promozione identity.
 
-### Phase 4 — Vertical 1: Volley (dominio minimo + read-only pubblico)
+### 7.4 — Vertical 1: Volley (dominio minimo + read-only pubblico)
 
 - DB volley con entità minime per consultazione:
   - team (ref Org core), competition, season, match (anche stub)
@@ -530,7 +449,7 @@ Deliverable: pipeline completa di proposta→review→promozione identity.
 
 Deliverable: volley consultabile e “sopravvive” in read-only quando platform down (target).
 
-### Phase 5 — Scalare a Sport 2 (Football) con processo replicabile
+### 7.5 — Scalare a Sport 2 (Football) con processo replicabile
 
 - Template “new vertical”:
   - cartelle backend/frontend
@@ -541,7 +460,7 @@ Deliverable: volley consultabile e “sopravvive” in read-only quando platform
 
 Deliverable: “aggiungere sport” diventa una checklist.
 
-### Phase 6 — Event vertical (multi-sport) (opzionale dopo 2 sport)
+### 7.6 — Event vertical (multi-sport) (opzionale dopo 2 sport)
 
 - Event = vertical con DB proprio.
 - Link debole event↔sport (discipline mapping).
@@ -549,7 +468,7 @@ Deliverable: “aggiungere sport” diventa una checklist.
 
 Deliverable: struttura pronta per olimpico/universiade.
 
-### Phase 7 — Ingestion/ETL (quando i dati manuali non bastano)
+### 7.7 — Ingestion/ETL (quando i dati manuali non bastano)
 
 - Worker + queue.
 - Pipeline: fetch → normalize → propose to inbox → approve → persist.
@@ -557,14 +476,14 @@ Deliverable: struttura pronta per olimpico/universiade.
 
 Deliverable: ingest semi-automatizzato con governance.
 
-### Phase 8 — Osservabilità “seria”
+### 7.8 — Osservabilità “seria”
 
 - OpenTelemetry (strumentazione Django) + backend traces.
 - Dashboard base (error rate, latency, heartbeat freshness).
 
 Deliverable: debug cross-servizi “da adulti”.
 
-## 7. Dev Links (local)
+## 8. Dev Links (local)
 
 ### Traefik
 
@@ -579,3 +498,10 @@ Deliverable: debug cross-servizi “da adulti”.
   - `GET http://platform.${DEV_DOMAIN}/api/docs`
 - OpenAPI JSON:
   - `GET http://platform.${DEV_DOMAIN}/api/openapi.json`
+
+```bash
+curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/openapi.json
+curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/docs
+curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/core/countries
+curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/core/sports
+```
