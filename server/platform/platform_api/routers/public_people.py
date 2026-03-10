@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 
 from ninja import Field, Query, Router, Schema
 
-from shared.utils.routing import normalize_search_params
+from shared.utils.routing import search_query_helper as search
 from shared.api_contract.ninja import (
     ListEnvelope,
     ListQueryParams,
@@ -70,38 +70,6 @@ class PersonSearchOut(Schema):
 class PersonListParams(ListQueryParams):
     primary_nationality_id: str | None = None
     sex: int | None = Field(default=None, ge=1, le=3)
-
-
-# endregion
-
-# region --- endpoint helpers ---
-
-
-def search(params: str, query) -> ListEnvelope:
-    params = normalize_search_params(params)
-    if not params:
-        return {
-            "items": [],
-            "total": 0,
-            "limit": 1,
-            "offset": 0,
-            "sort": None,
-        }
-
-    """
-    `icontains`, then annotate with a numeric rank:
-        0 = exact
-        1 = startswith
-        2 = contains
-    """
-    items = list(query(params))
-    return {
-        "items": items,
-        "total": len(items),
-        "limit": max(len(items), 1),
-        "offset": 0,
-        "sort": None,
-    }
 
 
 # endregion

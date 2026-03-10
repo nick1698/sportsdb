@@ -1,5 +1,7 @@
 from urllib.parse import urlencode
 
+from shared.api_contract.ninja import ListEnvelope
+
 
 class TableUrlConfig:
     router: str
@@ -88,5 +90,29 @@ class BaseRoute:
     # endregion
 
 
-def normalize_search_params(q: str | None) -> str | None:
-    return q.strip() if q else None
+def search_query_helper(params: str, query) -> ListEnvelope:
+    # normalization
+    params = params.strip if params else None
+    if not params:
+        return {
+            "items": [],
+            "total": 0,
+            "limit": 1,
+            "offset": 0,
+            "sort": None,
+        }
+
+    """
+    `icontains`, then annotate with a numeric rank:
+        0 = exact
+        1 = startswith
+        2 = contains
+    """
+    items = list(query(params))
+    return {
+        "items": items,
+        "total": len(items),
+        "limit": max(len(items), 1),
+        "offset": 0,
+        "sort": None,
+    }
