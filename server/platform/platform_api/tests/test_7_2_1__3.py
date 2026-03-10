@@ -9,7 +9,7 @@ from platform_api.models.entities import Org, Person, Sport
 from platform_api.routers import PlatformRoute
 
 
-# region --- Factory helpers (same style as Phase 1) ---------------------------------
+# region --- Factory helpers (same style as Phase 1) ---
 
 
 def _mk_country(
@@ -104,12 +104,12 @@ def _mk_person(
 
 # endregion
 
-# region --- Tests -------------------------------------------------------------------
+# region --- Tests ---
 
 
 class PublicCoreReadOnlyAPITests(TestCase):
     """
-    Phase 7.2.0:
+    Phase 7.2.[0-1]:
       - Read-only list/detail for countries & sports
       - Pagination envelope keys exist
       - Sorting works (MVP)
@@ -180,7 +180,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
 
 
 class GeoPlacesReadOnlyAPITests(TestCase):
-    """Phase 7.2.1: GeoPlace read-only endpoints (list/detail + filter)"""
+    """Phase 7.2.2: GeoPlace read-only endpoints (list/detail + filter)"""
 
     def setUp(self):
         it = _mk_country()
@@ -234,7 +234,7 @@ class GeoPlacesReadOnlyAPITests(TestCase):
 
 
 class CoreEntitiesReadOnlyAPITests(TestCase):
-    """Phase 2.3: Venue / Org / Person read-only endpoints."""
+    """Phase 7.2.3: Venue / Org / Person read-only endpoints."""
 
     def setUp(self):
         self.it = _mk_country()
@@ -428,6 +428,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             r = self.client.get(person_ep.retrieve(uuid.uuid4()))
             self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
 
+    @print_exit("Venue list invalid sort -> 400")
     def test_venue_list_invalid_sort_returns_400(self):
         venue_ep = PlatformRoute(Venue)
 
@@ -438,6 +439,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
         self.assertIn("error", data)
         self.assertIn("code", data["error"])
 
+    @print_exit("Person list invalid sex -> 422")
     def test_person_list_invalid_sex_returns_422(self):
         person_ep = PlatformRoute(Person)
 
