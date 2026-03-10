@@ -49,7 +49,6 @@ def _mk_user(username="tester"):
 
 
 class TimestampContractTests(TestCase):
-
     @print_exit("Timestamps - immutable ts_creation, modified ts_last_update")
     def test_ts_contract(self):
         test_sport = _mk_sport()

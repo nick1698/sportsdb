@@ -108,12 +108,7 @@ def _mk_person(
 
 
 class PublicCoreReadOnlyAPITests(TestCase):
-    """
-    Phase 7.2.[0-1]:
-      - Read-only list/detail for countries & sports
-      - Pagination envelope keys exist
-      - Sorting works (MVP)
-    """
+    """Phase 7.2.1: Core API contracts"""
 
     def setUp(self):
         _ = _mk_country(iso2="IT")
@@ -531,7 +526,6 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self, f"GET {self.org_ep.search}?q=... -> envelope + deterministic ranking"
         ):
             r = self.client.get(self.org_ep.search, {"q": "milan"})
-            print(self.org_ep.search)
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -578,7 +572,6 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self,
             f"GET {self.person_ep.search}?q=... -> envelope + deterministic ranking",
         ):
-            print(self.person_ep.search)
             r = self.client.get(self.person_ep.search, {"q": "mila"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
