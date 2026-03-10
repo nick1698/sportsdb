@@ -4,14 +4,12 @@ from django.http import JsonResponse
 from shared.api_contract.errors import ApiError, error_payload
 from shared.api_contract.factory import build_api
 
-from .routers.public_core import router as public_core_router
-from .routers.public_geo import router as public_geo_router
-from .routers.public_people import router as public_people_router
+from .routers import public_core, public_geo, public_people
 
 api = build_api(title="Platform API")
-api.add_router("/core", public_core_router)
-api.add_router("/geo", public_geo_router)
-api.add_router("/people", public_people_router)
+api.add_router("/core", public_core.router)
+api.add_router("/geo", public_geo.router)
+api.add_router("/people", public_people.router)
 
 
 @api.get("/health")

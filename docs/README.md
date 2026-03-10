@@ -392,9 +392,9 @@ Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 
 #### 7.2.4 - Search MVP
 
-- [ ] `GET /api/core/search/orgs?q=...`
-- [ ] `GET /api/core/search/persons?q=...`
-- [ ] Ranking semplice e deterministico (`exact > startswith > contains`)
+- [x] `GET /api/core/search/orgs?q=...`
+- [x] `GET /api/core/search/persons?q=...`
+- [x] Ranking semplice e deterministico (`exact > startswith > contains`)
 
 #### 7.2.5 - Alias nel core
 

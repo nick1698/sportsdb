@@ -53,6 +53,10 @@ class BaseRoute:
         return self._build_path(self.config.table_ep, f"{{{self.config.pk}}}")
 
     @property
+    def search_short(self):
+        return self._build_path("search", self.config.table_ep)
+
+    @property
     def base(self):
         return self._build_path("api", self.config.router, self.config.table_ep)
 
@@ -76,8 +80,13 @@ class BaseRoute:
         return self._with_query(self.base, params)
 
     def retrieve(self, pk: str, **params):
-        path = self._build_path("api", self.config.router, self.config.table_ep, str(pk))
+        path = self._build_path(
+            "api", self.config.router, self.config.table_ep, str(pk)
+        )
         return self._with_query(path, params)
 
     # endregion
 
+
+def normalize_search_params(q: str | None) -> str | None:
+    return q.strip() if q else None

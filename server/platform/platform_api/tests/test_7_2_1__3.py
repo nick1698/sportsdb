@@ -5,7 +5,7 @@ from django.test import TestCase
 from shared.utils.testing import assert_list_envelope, print_exit, subtest
 
 from platform_api.models.geo import Country, GeoPlace, Venue
-from platform_api.models.entities import Org, Person, Sport
+from platform_api.models.entities import Org, Person, Sex, Sport
 from platform_api.routers import PlatformRoute
 
 
@@ -84,7 +84,7 @@ def _mk_person(
     given_name="Mario",
     family_name="Rossi",
     nickname=None,
-    sex=1,
+    sex=Sex.MALE,
     primary_nationality: Country,
     sporting_nationality: Country | None = None,
     birth_date=None,
@@ -133,7 +133,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
         country_ep = PlatformRoute(Country)
         with subtest(self, f"GET {country_ep.base} -> envelope + pagination"):
             r = self.client.get(country_ep.list(limit=1, offset=0))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             assert_list_envelope(data, limit=1, offset=0)
@@ -144,7 +144,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {country_ep.base_id} -> 200 + payload"):
             r = self.client.get(country_ep.retrieve("IT"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["iso2"], "IT")
@@ -152,12 +152,12 @@ class PublicCoreReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {country_ep.base_id} -> 404 if missing"):
             r = self.client.get(country_ep.retrieve("ZZ"))
-            self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
         sport_ep = PlatformRoute(Sport)
         with subtest(self, f"GET {sport_ep.base} -> sort by key"):
             r = self.client.get(sport_ep.list(sort="key"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             assert_list_envelope(data)
@@ -168,7 +168,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {sport_ep.base_id} -> 200 + payload"):
             r = self.client.get(sport_ep.retrieve("volley"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["key"], "volley")
@@ -176,7 +176,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
 
         with subtest(self, "GET /api/core/sports/{key} -> 404 if missing"):
             r = self.client.get(sport_ep.retrieve("not-a-sport"))
-            self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
 
 class GeoPlacesReadOnlyAPITests(TestCase):
@@ -201,7 +201,7 @@ class GeoPlacesReadOnlyAPITests(TestCase):
         geoplace_ep = PlatformRoute(GeoPlace)
         with subtest(self, f"GET {geoplace_ep.base} -> envelope + pagination"):
             r = self.client.get(geoplace_ep.list(limit=2, offset=0))
-            self.assertEqual(r.status_code, 200)
+            self.assertEqual(HTTPStatus(r.status_code), 200)
 
             data = r.json()
             assert_list_envelope(data, limit=2, offset=0)
@@ -212,7 +212,7 @@ class GeoPlacesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {geoplace_ep.base} -> filter by country_id"):
             r = self.client.get(geoplace_ep.list(country_id="IT"))
-            self.assertEqual(r.status_code, 200)
+            self.assertEqual(HTTPStatus(r.status_code), 200)
             data = r.json()
 
             self.assertEqual(data["total"], 2)
@@ -221,7 +221,7 @@ class GeoPlacesReadOnlyAPITests(TestCase):
         with subtest(self, f"GET {geoplace_ep.base_id} -> 200"):
             gp = GeoPlace.objects.first()
             r = self.client.get(geoplace_ep.retrieve(gp.id))
-            self.assertEqual(r.status_code, 200)
+            self.assertEqual(HTTPStatus(r.status_code), 200)
             data = r.json()
             self.assertEqual(data["id"], str(gp.id))
             self.assertIn("name", data)
@@ -230,11 +230,11 @@ class GeoPlacesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {geoplace_ep.base_id} -> 404 if missing"):
             r = self.client.get(geoplace_ep.retrieve(uuid.uuid4()))
-            self.assertEqual(r.status_code, 404)
+            self.assertEqual(HTTPStatus(r.status_code), 404)
 
 
 class CoreEntitiesReadOnlyAPITests(TestCase):
-    """Phase 7.2.3: Venue / Org / Person read-only endpoints."""
+    """Phase 7.2.3: Venue / Org / Person read-only endpoints"""
 
     def setUp(self):
         self.it = _mk_country()
@@ -276,19 +276,19 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
         self.person_it = _mk_person(
             given_name="Giulia",
             family_name="Rossi",
-            sex=2,
+            sex=Sex.FEMALE,
             primary_nationality=self.it,
         )
         self.person_nl = _mk_person(
             given_name="Anouk",
             family_name="De Vries",
-            sex=2,
+            sex=Sex.FEMALE,
             primary_nationality=self.nl,
         )
         self.person_m = _mk_person(
             given_name="Marco",
             family_name="Bianchi",
-            sex=1,
+            sex=Sex.MALE,
             primary_nationality=self.it,
         )
 
@@ -298,7 +298,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {venue_ep.base} -> envelope + pagination"):
             r = self.client.get(venue_ep.list(limit=1, offset=0))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             assert_list_envelope(data, limit=1, offset=0)
@@ -308,7 +308,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {venue_ep.base} -> filter by country_id"):
             r = self.client.get(venue_ep.list(country_id="IT"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
@@ -317,7 +317,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {venue_ep.base} -> filter by geo_place_id"):
             r = self.client.get(venue_ep.list(geo_place_id=self.milano.id))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
@@ -325,7 +325,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {venue_ep.base_id} -> 200 + payload"):
             r = self.client.get(venue_ep.retrieve(self.venue_it.id))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["id"], str(self.venue_it.id))
@@ -334,7 +334,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {venue_ep.base_id} -> 404 if missing"):
             r = self.client.get(venue_ep.retrieve(uuid.uuid4()))
-            self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Org API contracts")
     def test_org_api_contract(self):
@@ -342,7 +342,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {org_ep.base} -> envelope + pagination"):
             r = self.client.get(org_ep.list(limit=1, offset=0))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             assert_list_envelope(data, limit=1, offset=0)
@@ -352,7 +352,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {org_ep.base} -> filter by country_id"):
             r = self.client.get(org_ep.list(country_id="IT"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
@@ -361,7 +361,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {org_ep.base} -> filter by type"):
             r = self.client.get(org_ep.list(type=2))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
@@ -370,7 +370,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {org_ep.base_id} -> 200 + payload"):
             r = self.client.get(org_ep.retrieve(self.org_it.id))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["id"], str(self.org_it.id))
@@ -379,7 +379,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {org_ep.base_id} -> 404 if missing"):
             r = self.client.get(org_ep.retrieve(uuid.uuid4()))
-            self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Person API contracts")
     def test_person_api_contract(self):
@@ -387,7 +387,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {person_ep.base} -> envelope + pagination"):
             r = self.client.get(person_ep.list(limit=2, offset=0))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             assert_list_envelope(data, limit=2, offset=0)
@@ -397,7 +397,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {person_ep.base} -> filter by primary_nationality_id"):
             r = self.client.get(person_ep.list(primary_nationality_id="IT"))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 2)
@@ -406,17 +406,17 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             )
 
         with subtest(self, f"GET {person_ep.base} -> filter by sex"):
-            r = self.client.get(person_ep.list(sex=1))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            r = self.client.get(person_ep.list(sex=Sex.MALE))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
             self.assertEqual(data["items"][0]["id"], str(self.person_m.id))
-            self.assertEqual(data["items"][0]["sex"], 1)
+            self.assertEqual(data["items"][0]["sex"], Sex.MALE)
 
         with subtest(self, f"GET {person_ep.base_id} -> 200 + payload"):
             r = self.client.get(person_ep.retrieve(self.person_it.id))
-            self.assertEqual(r.status_code, HTTPStatus.OK)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["id"], str(self.person_it.id))
@@ -426,14 +426,14 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
 
         with subtest(self, f"GET {person_ep.base_id} -> 404 if missing"):
             r = self.client.get(person_ep.retrieve(uuid.uuid4()))
-            self.assertEqual(r.status_code, HTTPStatus.NOT_FOUND)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Venue list invalid sort -> 400")
     def test_venue_list_invalid_sort_returns_400(self):
         venue_ep = PlatformRoute(Venue)
 
         r = self.client.get(venue_ep.list(sort="not_a_real_field"))
-        self.assertEqual(r.status_code, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.BAD_REQUEST)
 
         data = r.json()
         self.assertIn("error", data)
@@ -444,11 +444,201 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
         person_ep = PlatformRoute(Person)
 
         r = self.client.get(person_ep.list(sex=99))
-        self.assertEqual(r.status_code, HTTPStatus.UNPROCESSABLE_ENTITY)
+        self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
         data = r.json()
         self.assertIn("error", data)
         self.assertIn("code", data["error"])
+
+
+class CoreSearchReadOnlyAPITests(TestCase):
+    """Phase 7.2.4: Search MVP for Org / Person"""
+
+    org_ep = PlatformRoute(Org)
+    person_ep = PlatformRoute(Person)
+
+    def setUp(self):
+
+        self.it = _mk_country()
+        self.nl = _mk_country(
+            iso2="NL",
+            iso3="NLD",
+            numeric_code="528",
+            name_en="Netherlands",
+            name_local="Nederland",
+        )
+
+        self.milano = _mk_geo_place(self.it, "Milano", "milano", kind="locality")
+        self.utrecht = _mk_geo_place(self.nl, "Utrecht", "utrecht", kind="locality")
+
+        # Org fixtures for deterministic ranking: exact > startswith > contains
+        self.org_exact = _mk_org(
+            name="Milan",
+            org_type=1,
+            country=self.it,
+            home_geo_place=self.milano,
+        )
+        self.org_starts = _mk_org(
+            name="Milan Volley",
+            org_type=1,
+            country=self.it,
+            home_geo_place=self.milano,
+        )
+        self.org_contains = _mk_org(
+            name="New Milan Club",
+            org_type=1,
+            country=self.it,
+            home_geo_place=self.milano,
+        )
+        self.org_other = _mk_org(
+            name="Utrecht United",
+            org_type=2,
+            country=self.nl,
+            home_geo_place=self.utrecht,
+        )
+
+        # Person fixtures for deterministic ranking: exact > startswith > contains
+        self.person_exact = _mk_person(
+            given_name="Anna",
+            family_name="Rossi",
+            nickname="Mila",
+            sex=Sex.FEMALE,
+            primary_nationality=self.it,
+        )
+        self.person_starts = _mk_person(
+            given_name="Milan",
+            family_name="Bianchi",
+            sex=Sex.MALE,
+            primary_nationality=self.it,
+        )
+        self.person_contains = _mk_person(
+            given_name="Luca",
+            family_name="Di Milano",
+            sex=Sex.MALE,
+            primary_nationality=self.it,
+        )
+        self.person_other = _mk_person(
+            given_name="Anouk",
+            family_name="De Vries",
+            sex=Sex.FEMALE,
+            primary_nationality=self.nl,
+        )
+
+    @print_exit("Org search API contracts")
+    def test_org_search_api_contract(self):
+
+        with subtest(
+            self, f"GET {self.org_ep.search}?q=... -> envelope + deterministic ranking"
+        ):
+            r = self.client.get(self.org_ep.search, {"q": "milan"})
+            print(self.org_ep.search)
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertEqual(data["total"], 3)
+            self.assertEqual(len(data["items"]), 3)
+
+            returned_ids = [item["id"] for item in data["items"]]
+            self.assertEqual(
+                returned_ids,
+                [
+                    str(self.org_exact.id),
+                    str(self.org_starts.id),
+                    str(self.org_contains.id),
+                ],
+            )
+
+        with subtest(self, f"GET {self.org_ep.search}?q=... -> payload shape"):
+            r = self.client.get(self.org_ep.search, {"q": "milan"})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            first = data["items"][0]
+
+            self.assertIn("id", first)
+            self.assertIn("name", first)
+            self.assertIn("type", first)
+            self.assertIn("country_id", first)
+
+        with subtest(
+            self, f"GET {self.org_ep.search}?q=... -> empty result if no match"
+        ):
+            r = self.client.get(self.org_ep.search, {"q": "zzzzzz"})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertEqual(data["total"], 0)
+            self.assertEqual(data["items"], [])
+
+    @print_exit("Person search API contracts")
+    def test_person_search_api_contract(self):
+        with subtest(
+            self,
+            f"GET {self.person_ep.search}?q=... -> envelope + deterministic ranking",
+        ):
+            print(self.person_ep.search)
+            r = self.client.get(self.person_ep.search, {"q": "mila"})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertEqual(data["total"], 3)
+            self.assertEqual(len(data["items"]), 3)
+
+            returned_ids = [item["id"] for item in data["items"]]
+            self.assertEqual(
+                returned_ids,
+                [
+                    str(self.person_exact.id),
+                    str(self.person_starts.id),
+                    str(self.person_contains.id),
+                ],
+            )
+
+        with subtest(self, f"GET {self.person_ep.search}?q=... -> payload shape"):
+            r = self.client.get(self.person_ep.search, {"q": "mila"})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            first = data["items"][0]
+
+            self.assertIn("id", first)
+            self.assertIn("given_name", first)
+            self.assertIn("family_name", first)
+            self.assertIn("nickname", first)
+            self.assertIn("sex", first)
+            self.assertIn("primary_nationality_id", first)
+
+        with subtest(
+            self, f"GET {self.person_ep.search}?q=... -> empty result if no match"
+        ):
+            r = self.client.get(self.person_ep.search, {"q": "zzzzzz"})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertEqual(data["total"], 0)
+            self.assertEqual(data["items"], [])
+
+    @print_exit("Search invalid query -> 422")
+    def test_search_empty_query_returns_422(self):
+        with subtest(self, f"GET {self.org_ep.search}?q='' -> 422"):
+            r = self.client.get(self.org_ep.search, {"q": ""})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
+
+            data = r.json()
+            self.assertIn("error", data)
+            self.assertIn("code", data["error"])
+
+        with subtest(self, f"GET {self.person_ep.search}?q='' -> 422"):
+            r = self.client.get(self.person_ep.search, {"q": ""})
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
+
+            data = r.json()
+            self.assertIn("error", data)
+            self.assertIn("code", data["error"])
 
 
 # endregion
