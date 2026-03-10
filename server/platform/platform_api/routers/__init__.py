@@ -13,3 +13,21 @@ class PlatformRoute(BaseRoute):
         Org: TableUrlConfig("people", "orgs"),
         Person: TableUrlConfig("people", "persons"),
     }
+
+    @property
+    def presence_short(self):
+        return self._build_path(
+            self.config.table_ep, f"{{{self.config.pk}}}", "presences"
+        )
+
+    @property
+    def presence_base(self):
+        return self._build_path(
+            "api", self.config.router, self.config.table_ep, f"{{{self.config.pk}}}", "presences"
+        )
+
+    def presence(self, pk: str, **params):
+        path = self._build_path(
+            "api", self.config.router, self.config.table_ep, str(pk), "presences"
+        )
+        return self._with_query(path, params)

@@ -15,6 +15,7 @@ from shared.api_contract.ninja import (
 )
 
 from platform_api.models.entities import Org, Person
+from platform_api.models.presence import OrgPresence, PersonPresence
 from platform_api.routers import PlatformRoute
 
 router = Router(tags=["public-people"])
@@ -69,6 +70,11 @@ class PersonSearchOut(Schema):
 class PersonListParams(ListQueryParams):
     primary_nationality_id: str | None = None
     sex: int | None = Field(default=None, ge=1, le=3)
+
+
+class PresenceOut(Schema):
+    sport_key: str
+    vertical_entity_id: UUID
 
 
 # endregion
@@ -132,6 +138,32 @@ def search_orgs(request, q: str = Query(..., min_length=1)):
 
     return search(q, query)
 
+
+@router.get(org_ep.presence_short, response=ListEnvelope[PresenceOut])
+def list_org_presences(request, id: UUID, sport_key: str | None = None):
+    get_object_or_404(Org, id=id)
+
+    qs = OrgPresence.objects.filter(org_id=id)
+
+    if sport_key:
+        qs = qs.filter(sport_id=sport_key)
+
+    qs = qs.order_by("sport_id", "vertical_entity_id")
+    items = [
+        PresenceOut(
+            sport_key=row.sport_id,
+            vertical_entity_id=row.vertical_entity_id,
+        )
+        for row in qs.order_by("sport_id", "vertical_entity_id")
+    ]
+
+    return {
+        "items": items,
+        "total": len(items),
+        "limit": len(items),
+        "offset": 0,
+        "sort": None,
+    }
 
 
 # endregion
@@ -199,6 +231,32 @@ def search_persons(request, q: str = Query(..., min_length=1)):
 
     return search(q, query)
 
+
+@router.get(person_ep.presence_short, response=ListEnvelope[PresenceOut])
+def list_person_presences(request, id: UUID, sport_key: str | None = None):
+    get_object_or_404(Person, id=id)
+
+    qs = PersonPresence.objects.filter(person_id=id)
+
+    if sport_key:
+        qs = qs.filter(sport_id=sport_key)
+
+    qs = qs.order_by("sport_id", "vertical_entity_id")
+    items = [
+        PresenceOut(
+            sport_key=row.sport_id,
+            vertical_entity_id=row.vertical_entity_id,
+        )
+        for row in qs.order_by("sport_id", "vertical_entity_id")
+    ]
+
+    return {
+        "items": items,
+        "total": len(items),
+        "limit": len(items),
+        "offset": 0,
+        "sort": None,
+    }
 
 
 # endregion

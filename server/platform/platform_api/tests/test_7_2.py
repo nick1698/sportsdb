@@ -1,11 +1,13 @@
 from http import HTTPStatus
 import uuid
+
 from django.test import TestCase
 
 from shared.utils.testing import assert_list_envelope, print_exit, subtest
 
-from platform_api.models.geo import Country, GeoPlace, Venue
 from platform_api.models.entities import Org, Person, Sex, Sport
+from platform_api.models.geo import Country, GeoPlace, Venue
+from platform_api.models.presence import OrgPresence, PersonPresence
 from platform_api.routers import PlatformRoute
 
 
@@ -99,6 +101,22 @@ def _mk_person(
         sporting_nationality=sporting_nationality,
         birth_date=birth_date,
         death_date=death_date,
+    )
+
+
+def _mk_orgpresence(*, org, sport, vertical_entity_id=None):
+    return OrgPresence.objects.create(
+        org=org,
+        sport=sport,
+        vertical_entity_id=vertical_entity_id or uuid.uuid4(),
+    )
+
+
+def _mk_personpresence(*, person, sport, vertical_entity_id=None):
+    return PersonPresence.objects.create(
+        person=person,
+        sport=sport,
+        vertical_entity_id=vertical_entity_id or uuid.uuid4(),
     )
 
 
@@ -521,7 +539,6 @@ class CoreSearchReadOnlyAPITests(TestCase):
 
     @print_exit("Org search API contracts")
     def test_org_search_api_contract(self):
-
         with subtest(
             self, f"GET {self.org_ep.search}?q=... -> envelope + deterministic ranking"
         ):
@@ -600,6 +617,7 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self.assertIn("id", first)
             self.assertIn("given_name", first)
             self.assertIn("family_name", first)
+            self.assertIn("full_name", first)
             self.assertIn("nickname", first)
             self.assertIn("sex", first)
             self.assertIn("primary_nationality_id", first)
@@ -632,6 +650,163 @@ class CoreSearchReadOnlyAPITests(TestCase):
             data = r.json()
             self.assertIn("error", data)
             self.assertIn("code", data["error"])
+
+
+class CorePresencesReadOnlyAPITests(TestCase):
+    """Phase 7.2.5: Presence read-only nested endpoints"""
+
+    org_ep = PlatformRoute(Org)
+    person_ep = PlatformRoute(Person)
+
+    def setUp(self):
+        self.it = _mk_country()
+        self.nl = _mk_country(
+            iso2="NL",
+            iso3="NLD",
+            numeric_code="528",
+            name_en="Netherlands",
+            name_local="Nederland",
+        )
+
+        self.volley = _mk_sport("volley", "Volleyball")
+        self.football = _mk_sport("football", "Football")
+
+        self.org = _mk_org(
+            name="Volley Milano",
+            org_type=1,
+            country=self.it,
+        )
+        self.person = _mk_person(
+            given_name="Giulia",
+            family_name="Rossi",
+            sex=Sex.FEMALE,
+            primary_nationality=self.it,
+        )
+
+        self.org_volley_presence_id = uuid.uuid4()
+        self.org_football_presence_id = uuid.uuid4()
+        self.person_volley_presence_id = uuid.uuid4()
+        self.person_football_presence_id = uuid.uuid4()
+
+        _mk_orgpresence(
+            org=self.org,
+            sport=self.volley,
+            vertical_entity_id=self.org_volley_presence_id,
+        )
+        _mk_orgpresence(
+            org=self.org,
+            sport=self.football,
+            vertical_entity_id=self.org_football_presence_id,
+        )
+
+        _mk_personpresence(
+            person=self.person,
+            sport=self.volley,
+            vertical_entity_id=self.person_volley_presence_id,
+        )
+        _mk_personpresence(
+            person=self.person,
+            sport=self.football,
+            vertical_entity_id=self.person_football_presence_id,
+        )
+
+    @print_exit("Org presences API contracts")
+    def test_org_presences_api_contract(self):
+        with subtest(self, f"GET {self.org_ep.presence_base} -> envelope + payload"):
+            r = self.client.get(self.org_ep.presence(self.org.id))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertIn("sort", data)
+
+            self.assertEqual(data["total"], 2)
+            self.assertEqual(len(data["items"]), 2)
+
+            returned_sport_keys = [item["sport_key"] for item in data["items"]]
+            self.assertEqual(returned_sport_keys, ["football", "volley"])
+
+            returned_vertical_ids = [
+                item["vertical_entity_id"] for item in data["items"]
+            ]
+            self.assertEqual(
+                returned_vertical_ids,
+                [
+                    str(self.org_football_presence_id),
+                    str(self.org_volley_presence_id),
+                ],
+            )
+
+        with subtest(self, f"GET {self.org_ep.presence_base}?sport_key=... -> filter"):
+            r = self.client.get(self.org_ep.presence(self.org.id, sport_key="volley"))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+
+            self.assertEqual(data["total"], 1)
+            self.assertEqual(len(data["items"]), 1)
+            self.assertEqual(data["items"][0]["sport_key"], "volley")
+            self.assertEqual(
+                data["items"][0]["vertical_entity_id"],
+                str(self.org_volley_presence_id),
+            )
+
+        with subtest(self, f"GET {self.org_ep.presence_base} -> 404 if org missing"):
+            r = self.client.get(self.org_ep.presence(uuid.uuid4()))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
+
+    @print_exit("Person presences API contracts")
+    def test_person_presences_api_contract(self):
+        with subtest(self, f"GET {self.person_ep.presence_base} -> envelope + payload"):
+            r = self.client.get(self.person_ep.presence(self.person.id))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+            self.assertIn("sort", data)
+
+            self.assertEqual(data["total"], 2)
+            self.assertEqual(len(data["items"]), 2)
+
+            returned_sport_keys = [item["sport_key"] for item in data["items"]]
+            self.assertEqual(returned_sport_keys, ["football", "volley"])
+
+            returned_vertical_ids = [
+                item["vertical_entity_id"] for item in data["items"]
+            ]
+            self.assertEqual(
+                returned_vertical_ids,
+                [
+                    str(self.person_football_presence_id),
+                    str(self.person_volley_presence_id),
+                ],
+            )
+
+        with subtest(
+            self, f"GET {self.person_ep.presence_base}?sport_key=... -> filter"
+        ):
+            r = self.client.get(
+                self.person_ep.presence(self.person.id, sport_key="football")
+            )
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
+
+            data = r.json()
+            assert_list_envelope(data)
+
+            self.assertEqual(data["total"], 1)
+            self.assertEqual(len(data["items"]), 1)
+            self.assertEqual(data["items"][0]["sport_key"], "football")
+            self.assertEqual(
+                data["items"][0]["vertical_entity_id"],
+                str(self.person_football_presence_id),
+            )
+
+        with subtest(
+            self, f"GET {self.person_ep.presence_base} -> 404 if person missing"
+        ):
+            r = self.client.get(self.person_ep.presence(uuid.uuid4()))
+            self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
 
 # endregion
