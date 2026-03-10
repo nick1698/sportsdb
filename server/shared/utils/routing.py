@@ -92,7 +92,7 @@ class BaseRoute:
 
 def search_query_helper(params: str, query) -> ListEnvelope:
     # normalization
-    params = params.strip if params else None
+    params = params.strip() if params else None
     if not params:
         return {
             "items": [],

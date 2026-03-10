@@ -1,8 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from django.db.models import Q, Case, CharField, IntegerField, Value, When
-from django.db.models.functions import Concat
+from django.db.models import Q, Case, IntegerField, Value, When
 from django.shortcuts import get_object_or_404
 
 from ninja import Field, Query, Router, Schema
@@ -133,45 +132,6 @@ def search_orgs(request, q: str = Query(..., min_length=1)):
 
     return search(q, query)
 
-    # q = normalize_search_params(q)
-    # if not q:
-    #     return {
-    #         "items": [],
-    #         "total": 0,
-    #         "limit": 0,
-    #         "offset": 0,
-    #         "sort": None,
-    #     }
-
-    # """
-    # `icontains`, then annotate with a numeric rank:
-    # 0 = exact;
-    # 1 = startswith;
-    # 2 = contains
-    # """
-    # query_res = (
-    #     Org.objects.filter(Q(name__icontains=q) | Q(short_name__icontains=q))
-    #     .annotate(
-    #         search_rank=Case(
-    #             When(name__iexact=q, then=Value(0)),
-    #             When(short_name__iexact=q, then=Value(0)),
-    #             When(name__istartswith=q, then=Value(1)),
-    #             When(short_name__istartswith=q, then=Value(1)),
-    #             default=Value(2),
-    #             output_field=IntegerField(),
-    #         )
-    #     )
-    #     .order_by("search_rank", "name", "id")
-    # )
-
-    # items = list(query_res)
-    # return {
-    #     "items": items,
-    #     "total": len(items),
-    #     "limit": len(items),
-    #     "offset": 0,
-    #     "sort": None,
-    # }
 
 
 # endregion
@@ -223,18 +183,13 @@ def search_persons(request, q: str = Query(..., min_length=1)):
                 | Q(nickname__icontains=param)
             )
             .annotate(
-                full_name_db=Concat(
-                    "given_name", Value(" "), "family_name", output_field=CharField()
-                ),
                 search_rank=Case(
                     When(nickname__iexact=param, then=Value(0)),
                     When(given_name__iexact=param, then=Value(0)),
                     When(family_name__iexact=param, then=Value(0)),
-                    When(full_name_db__iexact=param, then=Value(0)),
                     When(nickname__istartswith=param, then=Value(1)),
                     When(given_name__istartswith=param, then=Value(1)),
                     When(family_name__istartswith=param, then=Value(1)),
-                    When(full_name_db__istartswith=param, then=Value(1)),
                     default=Value(2),
                     output_field=IntegerField(),
                 ),
@@ -244,56 +199,6 @@ def search_persons(request, q: str = Query(..., min_length=1)):
 
     return search(q, query)
 
-    # q = normalize_search_params(q)
-    # if not q:
-    #     return {
-    #         "items": [],
-    #         "total": 0,
-    #         "limit": 0,
-    #         "offset": 0,
-    #         "sort": None,
-    #     }
-
-    # """
-    # `icontains`, then annotate with a numeric rank:
-    # 0 = exact;
-    # 1 = startswith;
-    # 2 = contains
-    # """
-    # ret = (
-    #     Person.objects.filter(
-    #         Q(given_name__icontains=q)
-    #         | Q(family_name__icontains=q)
-    #         | Q(nickname__icontains=q)
-    #     )
-    #     .annotate(
-    #         full_name_db=Concat(
-    #             "given_name", Value(" "), "family_name", output_field=CharField()
-    #         ),
-    #         search_rank=Case(
-    #             When(nickname__iexact=q, then=Value(0)),
-    #             When(given_name__iexact=q, then=Value(0)),
-    #             When(family_name__iexact=q, then=Value(0)),
-    #             When(full_name_db__iexact=q, then=Value(0)),
-    #             When(nickname__istartswith=q, then=Value(1)),
-    #             When(given_name__istartswith=q, then=Value(1)),
-    #             When(family_name__istartswith=q, then=Value(1)),
-    #             When(full_name_db__istartswith=q, then=Value(1)),
-    #             default=Value(2),
-    #             output_field=IntegerField(),
-    #         ),
-    #     )
-    #     .order_by("search_rank", "family_name", "given_name", "id")
-    # )
-
-    # items = list(ret)
-    # return {
-    #     "items": items,
-    #     "total": len(items),
-    #     "limit": len(items),
-    #     "offset": 0,
-    #     "sort": None,
-    # }
 
 
 # endregion

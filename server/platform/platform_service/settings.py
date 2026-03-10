@@ -132,6 +132,6 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SHELL_PLUS_IMPORTS = [
-    "from shared.api_contract import BaseRoute",
+    "from shared.utils.routing import BaseRoute",
     "from platform_api.routers import PlatformRoute"
 ]
