@@ -252,6 +252,8 @@ _Deliverable_:
 - [x] DB up
 - [ ] logging coerente
 
+---
+
 ### 7.1 — Platform DB (Core Identity + Presence + Inbox)
 
 **Obiettivo:** creare il _Platform DB_ Postgres con le entità **cross-sport** (country/sport/geo/venue/org/person),
@@ -342,6 +344,8 @@ _Deliverable_:
 - [x] Testing models
 - [x] Presence funzionante (vincoli + query)
 - [x] Inbox funzionante (request + events + listing)
+
+---
 
 ### 7.2 — Core Identity “consumabile” (API read-only + search + alias + hard-refs)
 
@@ -458,15 +462,278 @@ _Deliverable_: il contratto tra platform e vertical distingue chiaramente identi
 
 _Deliverable_: il vertical può referenziare identity core in modo sicuro e il pubblico può consultare i dati base in read-only.
 
-### 7.3 — Inbox identity (governance) + UI piattaforma
+---
 
-- Modello InboxRequest + stati unificati.
-- Workflow: create/link/merge/reject.
-- Clustering assistito (minimo: chiavi morbide + suggerimenti).
-- Atomicità end-to-end: “approve” come transazione coordinata.
-- UI inbox (platform-web) per review.
+### 7.3 — Inbox identity (governance) + UI platform
 
-_Deliverable_: pipeline completa di proposta→review→promozione identity.
+#### 7.3.0 — Freeze del contratto Inbox
+
+- la Inbox non è un read-model pubblico
+- la Inbox non è un sistema di editing diretto del core
+- la Inbox contiene proposte governate, non dati già promossi
+- i vertical non creano o modificano direttamente entità core
+- ogni creazione / update / link / merge su entità core passa da review platform nella Inbox
+
+Deliverable: contratto funzionale Inbox chiarito e non ambiguo.
+
+#### 7.3.1 — Model Django definitivo InboxRequest
+
+- [ ] Definire il model definitivo della Inbox
+- [ ] Confermare naming finale del model
+- [ ] Confermare enum minime per action e status
+- [ ] Confermare campi obbligatori vs nullable
+- [ ] Confermare indici MVP
+- [ ] Allineare admin, schema SQL e README
+
+Campi MVP attesi (nomi da adattare se già decisi diversamente):
+
+- `id`
+- `entity_kind`
+- `action_type` (`create`, `update`, `link`, `merge`)
+- `status` (`pending`, `approved`, `rejected`, `cancelled`)
+- `vertical_slug`
+- `target_platform_id` nullable
+- `payload` JSON
+- `resolution_payload` nullable
+- `rejection_reason` nullable
+- `created_by`
+- `reviewed_by` nullable
+- `created_at`
+- `reviewed_at` nullable
+
+Indici MVP attesi:
+
+- per stato
+- per tipo entità
+- per vertical
+- per target_platform_id
+- per data creazione
+- eventuale indice composito su `(status, entity_kind, created_at)`
+
+Deliverable: modello Inbox stabile e migrabile.
+
+#### 7.3.2 — State machine e regole di transizione
+
+- [ ] Definire gli stati ammessi
+- [ ] Definire le transizioni lecite
+- [ ] Bloccare le transizioni invalide lato service
+- [ ] Definire idempotenza minima delle azioni di review
+- [ ] Definire semantica di reviewed_by e reviewed_at
+
+Transizioni MVP consigliate:
+
+- `pending -> approved`
+- `pending -> rejected`
+- `pending -> cancelled`
+
+Regole MVP:
+
+- una richiesta non pending non può essere ri-reviewata
+- `approved` e `rejected` valorizzano reviewer e review timestamp
+- `cancelled` è ammesso solo se ha senso lato prodotto; altrimenti ometterlo
+- niente ritorno a `pending` nel MVP
+- niente soft-delete logico implicito nelle review actions
+
+Deliverable: macchina a stati chiusa e verificabile nei test.
+
+#### 7.3.3 — Service layer Inbox (dominio applicativo)
+
+- [ ] Creare service layer dedicato alla Inbox
+- [ ] Separare la logica dai router
+- [ ] Introdurre funzioni chiare per create / approve / reject / link / merge
+- [ ] Centralizzare validazioni, guardie e aggiornamenti di stato
+- [ ] Preparare la base per transazioni atomiche
+
+Funzioni minime attese:
+
+- `create_inbox_request(...)`
+- `approve_inbox_request(...)`
+- `reject_inbox_request(...)`
+- `cancel_inbox_request(...)` (se confermato)
+- eventuali helper interni per `link` e `merge`
+
+Regole:
+
+- i router non devono contenere logica di business
+- i service devono essere il punto unico delle transizioni
+- i side effects devono essere concentrati qui, non sparsi in controller/admin
+
+Deliverable: logica Inbox centralizzata e testabile.
+
+#### 7.3.4 — Atomicità end-to-end dell’approve
+
+- [ ] Definire cosa significa “approve” per ogni action type
+- [ ] Racchiudere l’approve in transazione DB
+- [ ] Garantire assenza di stati intermedi incoerenti
+- [ ] Aggiornare la request Inbox e i dati core nello stesso flusso
+- [ ] Definire rollback totale in caso di errore
+
+Semantica MVP per action type:
+
+- `create`: crea o promuove l’entità core e chiude la request
+- `update`: applica l’update al core e chiude la request
+- `link`: collega la proposta a una entità core esistente
+- `merge`: risolve più identità candidate in una sola identità core, se davvero previsto nel MVP; altrimenti rinviarlo
+
+Regole:
+
+- niente partial commit
+- niente update del core fuori transazione
+- la Inbox deve riflettere fedelmente l’esito finale dell’operazione
+
+Deliverable: approve atomico e affidabile.
+
+#### 7.3.5 — API private / interne della Inbox
+
+- [ ] Definire gli endpoint minimi interni o staff-only
+- [ ] Esporre create/list/detail/review in modo coerente
+- [ ] Definire envelope e mapping errori
+- [ ] Distinguere lettura da azioni di review
+- [ ] Limitare la superficie API al necessario per il MVP
+
+Endpoint MVP suggeriti:
+
+- [ ] `POST /api/inbox/requests`
+- [ ] `GET /api/inbox/requests`
+- [ ] `GET /api/inbox/requests/{id}`
+- [ ] `POST /api/inbox/requests/{id}/approve`
+- [ ] `POST /api/inbox/requests/{id}/reject`
+- [ ] `POST /api/inbox/requests/{id}/cancel` (solo se confermato)
+
+Filtri MVP suggeriti per la list:
+
+- `status`
+- `entity_kind`
+- `action_type`
+- `vertical_slug`
+- ordinamento per creazione
+
+Deliverable: API interna sufficiente a governare la Inbox.
+
+#### 7.3.6 — Test backend Inbox
+
+- [ ] Test model
+- [ ] Test state machine
+- [ ] Test service layer
+- [ ] Test API contract
+- [ ] Test atomicità approve
+- [ ] Test error mapping
+
+Casi minimi da coprire:
+
+- create request valida
+- richiesta con payload invalido
+- approve di request pending
+- reject di request pending
+- doppia approve non consentita
+- approve di request già rejected non consentita
+- reviewer e reviewed_at valorizzati correttamente
+- nessuna modifica core in caso di errore durante approve
+- list filtrata per status / entity_kind / vertical
+
+Deliverable: Inbox protetta da regressioni.
+
+#### 7.3.7 — Clustering assistito minimo
+
+- [ ] Definire chiavi morbide per suggerimenti
+- [ ] Generare candidati simili per review umana
+- [ ] Evitare qualunque auto-merge nel MVP
+- [ ] Limitare il clustering a supporto decisionale
+- [ ] Rendere i suggerimenti leggibili in admin/UI
+
+Esempi di chiavi morbide:
+
+- nome normalizzato
+- paese
+- data di nascita
+- acronimo / short name
+- city / geo place
+- external ids noti
+
+Regole MVP:
+
+- il clustering non decide mai da solo
+- il clustering suggerisce soltanto
+- il reviewer resta l’unica autorità di promozione / link / merge
+
+Deliverable: review assistita senza automazioni pericolose.
+
+#### 7.3.8 — Admin Django Inbox
+
+- [ ] Registrare il model Inbox in admin
+- [ ] Configurare `list_display`
+- [ ] Configurare `list_filter`
+- [ ] Configurare `search_fields`
+- [ ] Configurare `readonly_fields`
+- [ ] Aggiungere fieldsets coerenti
+- [ ] Rendere visibili stato, reviewer, target e payload
+
+Obiettivi admin MVP:
+
+- ispezionare facilmente le richieste
+- filtrare le pending
+- aprire rapidamente il dettaglio
+- leggere payload e resolution payload
+- evitare modifiche manuali incontrollate ai campi sensibili
+
+Deliverable: backoffice tecnico minimo già usabile.
+
+#### 7.3.9 — UI platform-web per review Inbox
+
+- [ ] Definire pagina Inbox list
+- [ ] Definire pagina Inbox detail
+- [ ] Mostrare stato, action, entity kind, vertical, autore, date
+- [ ] Mostrare payload proposta
+- [ ] Mostrare candidati / suggerimenti se presenti
+- [ ] Aggiungere azioni approve / reject
+- [ ] Gestire loading, errori e conferme base
+
+Vista lista MVP:
+
+- tabella o cards con filtri minimi
+- priorità alle richieste `pending`
+- link diretto al dettaglio
+
+Vista dettaglio MVP:
+
+- metadati richiesta
+- payload leggibile
+- target core se già presente
+- sezione candidati suggeriti
+- bottoni di review
+
+Deliverable: reviewer platform in grado di gestire il workflow senza passare dall’admin tecnico.
+
+#### 7.3.10 — Integrazione verticale → Inbox
+
+- [ ] Definire come un vertical apre una proposta Inbox
+- [ ] Definire il payload minimo condiviso
+- [ ] Definire come il vertical riceve o salva l’hard-ref dopo review
+- [ ] Chiarire che il vertical non promuove direttamente identità core
+- [ ] Documentare il flusso end-to-end nel README
+
+Flusso MVP:
+
+1. il vertical rileva necessità di create / update / link su entità core
+2. apre una request nella Inbox platform
+3. il reviewer platform valuta la proposta
+4. il platform approva / rifiuta / collega
+5. l’UUID core risultante viene salvato nel vertical come hard-ref applicativo
+
+Deliverable: pipeline completa vertical → inbox → review → hard-ref stabile.
+
+#### 7.3.11 — Chiusura del milestone 7.3
+
+- [ ] Model Inbox stabile
+- [ ] Migrations applicate
+- [ ] Admin pronto
+- [ ] API interna pronta
+- [ ] Service layer con transazioni pronto
+- [ ] Test verdi
+- [ ] UI review MVP pronta
+- [ ] README aggiornato con workflow finale
+
+Deliverable: pipeline completa di proposta → review → promozione identity.
 
 ### 7.4 — Vertical 1: Volley (dominio minimo + read-only pubblico)
 
