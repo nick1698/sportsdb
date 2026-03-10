@@ -4,6 +4,8 @@ from django.test import TestCase, TransactionTestCase
 from django.db import IntegrityError, transaction
 from django.contrib.auth import get_user_model
 
+from shared.utils.testing import print_exit, subtest
+
 from platform_api.models.geo import Country  # :contentReference[oaicite:1]{index=1}
 from platform_api.models.entities import (
     Sport,
@@ -23,8 +25,6 @@ from platform_api.models.inbox import (  # :contentReference[oaicite:4]{index=4}
     RequestStatus,
     EventType,
 )
-
-from .common import print_exit, subtest
 
 
 def _mk_country():
