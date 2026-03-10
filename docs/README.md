@@ -396,36 +396,24 @@ Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 - [x] `GET /api/core/search/persons?q=...`
 - [x] Ranking semplice e deterministico (`exact > startswith > contains`)
 
-#### 7.2.5 - Alias nel core
-
-- [ ] `OrgAlias`
-- [ ] `PersonAlias`
-- [ ] eventuale `VenueAlias`
-- [ ] Search che include alias
-
-#### 7.2.6 - Presences read-only
+#### 7.2.5 - Presence tables read-only
 
 - [ ] `GET /api/core/orgs/{id}/presences`
 - [ ] `GET /api/core/persons/{id}/presences`
 - [ ] listing filtrabili per `sport_key`
 
-#### 7.2.7 - Hard-refs per vertical
+#### 7.2.6 - Hard-refs per vertical
 
 - [ ] Documentare il contratto minimo platform ↔ vertical
 - [ ] Definire cosa è hard-ref vs soft-ref
 - [ ] Eventuali endpoint minimi di validate
 
-#### 7.2.8 - Testing
+#### 7.2.7 - Optional: search alias per core entities
 
-- [x] Test list/detail per `countries`
-- [x] Test list/detail per `sports`
-- [x] Test list/detail/filter per `locations`
-- [ ] Test per `venues`
-- [ ] Test per `orgs`
-- [ ] Test per `persons`
-- [ ] Test search
-- [ ] Test alias
-- [ ] Test presences
+- [ ] `OrgAlias`
+- [ ] `PersonAlias`
+- [ ] eventuale `VenueAlias`
+- [ ] Search che include alias
 
 Deliverable: il vertical può referenziare identity core in modo sicuro e il pubblico può consultare i dati base in read-only.
 
