@@ -1,4 +1,4 @@
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urlencode
 
 
 class TableUrlConfig:
@@ -13,38 +13,71 @@ class TableUrlConfig:
 
 
 class BaseRoute:
+    # region BASE
+
     t: type
     TABLES_URLS: dict[type, TableUrlConfig] = {}
 
     def __init__(self, t: type):
         self.t = t
-        if self.t not in self.TABLES_URLS.keys():
-            self.TABLES_URLS[self.t] = TableUrlConfig("/", "")
+
+    @property
+    def config(self) -> TableUrlConfig:
+        return self.TABLES_URLS.get(self.t, TableUrlConfig("/", ""))
+
+    # endregion
+
+    # region CLASS HELPERS
+
+    @staticmethod
+    def _build_path(*parts: str) -> str:
+        cleaned = [part.strip("/") for part in parts if part]
+        return "/" + "/".join(cleaned)
+
+    @staticmethod
+    def _with_query(path: str, params: dict) -> str:
+        if not params:
+            return path
+        return f"{path}?{urlencode(params)}"
+
+    # endregion
+
+    # region PROPERTIES
 
     @property
     def short(self):
-        uc = self.TABLES_URLS[self.t]
-        return f"/{uc.table_ep}"
+        return self._build_path(self.config.table_ep)
 
     @property
     def short_id(self):
-        uc = self.TABLES_URLS[self.t]
-        return urljoin(f"/{uc.table_ep}/", f"{{{uc.pk}}}")
+        return self._build_path(self.config.table_ep, f"{{{self.config.pk}}}")
 
     @property
     def base(self):
-        uc = self.TABLES_URLS[self.t]
-        return urljoin("/api/", f"{uc.router}/{uc.table_ep}")
+        return self._build_path("api", self.config.router, self.config.table_ep)
 
     @property
     def base_id(self):
-        uc = self.TABLES_URLS[self.t]
-        return urljoin("/api/", f"{uc.router}/{uc.table_ep}/{{{uc.pk}}}")
+        return self._build_path(
+            "api", self.config.router, self.config.table_ep, f"{{{self.config.pk}}}"
+        )
+
+    @property
+    def search(self):
+        return self._build_path(
+            "api", self.config.router, "search", self.config.table_ep
+        )
+
+    # endregion
+
+    # region QUERY METHODS
 
     def list(self, **params):
-        uc = self.TABLES_URLS[self.t]
-        return urljoin("/api/", f"{uc.router}/{uc.table_ep}?{urlencode(params)}")
+        return self._with_query(self.base, params)
 
     def retrieve(self, pk: str, **params):
-        uc = self.TABLES_URLS[self.t]
-        return urljoin("/api/", f"{uc.router}/{uc.table_ep}/{pk}?{urlencode(params)}")
+        path = self._build_path("api", self.config.router, self.config.table_ep, str(pk))
+        return self._with_query(path, params)
+
+    # endregion
+
