@@ -24,7 +24,7 @@ from platform_api.models.inbox import (  # :contentReference[oaicite:4]{index=4}
     EventType,
 )
 
-from .common import ok
+from .common import print_exit, subtest
 
 
 def _mk_country():
@@ -49,6 +49,8 @@ def _mk_user(username="tester"):
 
 
 class TimestampContractTests(TestCase):
+
+    @print_exit("Timestamps - immutable ts_creation, modified ts_last_update")
     def test_ts_contract(self):
         test_sport = _mk_sport()
         t0 = test_sport.ts_creation
@@ -61,15 +63,16 @@ class TimestampContractTests(TestCase):
         self.assertEqual(test_sport.ts_creation, t0)
         self.assertGreater(test_sport.ts_last_update, u0)
 
-        ok("Timestamps: immutable ts_creation, modified ts_last_update")
-
 
 class PresenceConstraintTests(TestCase):
+    @print_exit("Presence constraints")
     def test_presence_constraints(self):
         test_country = _mk_country()
         test_sport = _mk_sport()
 
-        with self.subTest("PersonPresence: unique(person, sport, vertical_entity_id)"):
+        with subtest(
+            self, "PersonPresence - unique(person, sport, vertical_entity_id)"
+        ):
             person = Person.objects.create(
                 given_name="Ada",
                 family_name="Lovelace",
@@ -87,9 +90,7 @@ class PresenceConstraintTests(TestCase):
                         person=person, sport=test_sport, vertical_entity_id=vid
                     )
 
-            ok("PersonPresence unique constraint")
-
-        with self.subTest("OrgPresence: unique(org, sport, vertical_entity_id)"):
+        with subtest(self, "OrgPresence - unique(org, sport, vertical_entity_id)"):
             org = Org.objects.create(
                 type=OrgType.CLUB,
                 name="AC Test Club",
@@ -108,12 +109,11 @@ class PresenceConstraintTests(TestCase):
                         org=org, sport=test_sport, vertical_entity_id=vid
                     )
 
-            ok("OrgPresence unique constraint")
-
 
 class InboxFlowTests(TransactionTestCase):
+    @print_exit("Inbox contracts")
     def test_inbox_contracts(self):
-        with self.subTest("Inbox CREATE: auto event CREATED on commit"):
+        with subtest(self, "Inbox CREATE: auto event CREATED on commit"):
             user = _mk_user("inbox_tester1")
             sport = _mk_sport()
 
@@ -134,9 +134,7 @@ class InboxFlowTests(TransactionTestCase):
             self.assertEqual(created_events.count(), 1)
             self.assertEqual(created_events.first().actor_id, user.id)
 
-            ok("Inbox: CREATE -> event CREATED")
-
-        with self.subTest("Inbox UPDATE: target required (check constraint)"):
+        with subtest(self, "Inbox UPDATE: target required (check constraint)"):
             user = _mk_user("inbox_tester2")
 
             with self.assertRaises(IntegrityError):
@@ -149,5 +147,3 @@ class InboxFlowTests(TransactionTestCase):
                         payload={"nickname": "NewNick"},
                         created_by=user,
                     )
-
-            ok("Inbox: UPDATE but no target -> blocked")
