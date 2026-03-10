@@ -246,7 +246,7 @@ Questa è la convenzione preferita del progetto per costruire e riusare gli URL 
   - [x] error format + error codes catalog
   - [x] request_id + traceparent propagation
 
-Deliverable:
+_Deliverable_:
 
 - [x] `GET /health` ovunque
 - [x] DB up
@@ -290,7 +290,7 @@ le tabelle di **presence** (mapping platform ↔ vertical DB), e il workflow di 
   - FK opzionale: `sporting_nationality_id`
   - check: `death_date >= birth_date` se entrambe presenti
 
-Deliverable: CRUD/admin minimo per tutte le entità core, con vincoli e indici applicati.
+_Deliverable_: CRUD/admin minimo per tutte le entità core, con vincoli e indici applicati.
 
 #### 1.3 Presence (platform ↔ vertical DB mapping)
 
@@ -307,7 +307,7 @@ Deliverable: CRUD/admin minimo per tutte le entità core, con vincoli e indici a
   - campo verso i db vertical: `vertical_entity_id uuid`
   - unique: `(person_id, sport_key, vertical_entity_id)`
 
-Deliverable: inserimenti di presence + verifica vincoli unique + query semplici per sport.
+_Deliverable_: inserimenti di presence + verifica vincoli unique + query semplici per sport.
 
 #### 1.4 Inbox (governance MVP nel core)
 
@@ -324,7 +324,7 @@ Deliverable: inserimenti di presence + verifica vincoli unique + query semplici 
   - FK: `request_id` (cascade)
   - `actor` (user che commette l'evento)
 
-Deliverable:
+_Deliverable_:
 
 - endpoint _minimi_ (anche temporanei) o comandi admin per:
   - creare request
@@ -363,7 +363,7 @@ Deliverable:
 - [x] `GET /api/core/sports` (list, paginated)
 - [x] `GET /api/core/sports/{key}` (detail, 404 se missing)
 
-Deliverable: pattern API read-only stabile e riusabile per entità core semplici.
+_Deliverable_: pattern API read-only stabile e riusabile per entità core semplici.
 
 #### 7.2.2 - Geo API read-only
 
@@ -375,7 +375,7 @@ Deliverable: pattern API read-only stabile e riusabile per entità core semplici
 - [x] Sorting minimo
 - [x] Test list/detail/filter
 
-Deliverable: GeoPlace interrogabile pubblicamente con contratto coerente a countries/sports.
+_Deliverable_: GeoPlace interrogabile pubblicamente con contratto coerente a countries/sports.
 
 #### 7.2.3 - Core entities read-only successive
 
@@ -388,7 +388,7 @@ Deliverable: GeoPlace interrogabile pubblicamente con contratto coerente a count
 - [x] Filtri minimi per `org`
 - [x] Filtri minimi per `person`
 
-Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
+_Deliverable_: Core Identity consultabile pubblicamente in modo uniforme.
 
 #### 7.2.4 - Search MVP
 
@@ -398,15 +398,56 @@ Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 
 #### 7.2.5 - Presence tables read-only
 
-- [ ] `GET /api/core/orgs/{id}/presences`
-- [ ] `GET /api/core/persons/{id}/presences`
-- [ ] listing filtrabili per `sport_key`
+- [x] `GET /api/core/orgs/{id}/presences`
+- [x] `GET /api/core/persons/{id}/presences`
+- [x] listing filtrabili per `sport_key`
 
 #### 7.2.6 - Hard-refs per vertical
 
-- [ ] Documentare il contratto minimo platform ↔ vertical
-- [ ] Definire cosa è hard-ref vs soft-ref
-- [ ] Eventuali endpoint minimi di validate
+- [x] Documentare il contratto minimo platform ↔ vertical
+- [x] Definire cosa è hard-ref vs soft-ref
+- [x] Eventuali endpoint minimi di validate: per MVP non servono endpoint dedicati di batch validation
+
+Nel modello platform + vertical, un **hard-ref** è un riferimento identitario stabile da una entità del vertical verso una entità core del platform.
+
+- `platform_person_id`
+- `platform_org_id`
+- `platform_venue_id`
+- `platform_geo_place_id`
+
+##### Descrizione degli hard-ref
+
+- sono UUID di entità core già esistenti nel platform
+- vengono salvati anche nel vertical come semplice riferimento applicativo
+- non costituiscono foreign key SQL cross-db
+- rappresentano il collegamento stabile tra una manifestazione sport-specific e la relativa identità core
+
+Esempio concettuale:
+
+- `platform.person` = identità generale della persona
+- `volley.athlete` = manifestazione volley di quella persona
+- `volley.athlete.platform_person_id` = hard-ref verso `platform.person`
+
+##### Come vengono assegnati questi hard-ref
+
+Il vertical non ha facoltà di creare o aggiornare direttamente le entità multi-vertical del platform.  
+Quando dal vertical emerge una necessità di `create` o di `update` di un'entità core, il flusso passa tramite la funzione/tabella **Inbox** del platform.
+
+1. dal vertical arriva la proposta di creazione o modifica
+2. dalla platform.inbox viene approvato, rifiutato o risolto il matching proposto
+3. l'UUID dell'entità core approvata viene usato come `hard-ref` stabile
+4. il vertical salva tale UUID anche come riferimento applicativo locale
+
+##### Proposta API post-MVP
+
+Per MVP non sono richiesti endpoint dedicati di tipo `validate/*` per batch checking degli UUID, poiché
+
+- la creazione/modifica delle entità core è già previsto che passi interamente attraverso la `platform.inbox`
+- dopo approvazione, il vertical conserva l'UUID già approvato/risolto
+- per la lettura di un'entità core già nota bastano i normali endpoint `get_*`
+- gli endpoint `search_*` potrebbero servire solo come supporto al matching umano/editoriale, non come validazione identitaria
+
+_Deliverable_: il contratto tra platform e vertical distingue chiaramente identità core, workflow di approvazione e riferimenti applicativi locali, senza introdurre foreign key cross-db né endpoint di validazione ridondanti.
 
 #### 7.2.7 - Optional: search alias per core entities
 
@@ -415,7 +456,7 @@ Deliverable: Core Identity consultabile pubblicamente in modo uniforme.
 - [ ] eventuale `VenueAlias`
 - [ ] Search che include alias
 
-Deliverable: il vertical può referenziare identity core in modo sicuro e il pubblico può consultare i dati base in read-only.
+_Deliverable_: il vertical può referenziare identity core in modo sicuro e il pubblico può consultare i dati base in read-only.
 
 ### 7.3 — Inbox identity (governance) + UI piattaforma
 
@@ -425,7 +466,7 @@ Deliverable: il vertical può referenziare identity core in modo sicuro e il pub
 - Atomicità end-to-end: “approve” come transazione coordinata.
 - UI inbox (platform-web) per review.
 
-Deliverable: pipeline completa di proposta→review→promozione identity.
+_Deliverable_: pipeline completa di proposta→review→promozione identity.
 
 ### 7.4 — Vertical 1: Volley (dominio minimo + read-only pubblico)
 
@@ -435,7 +476,7 @@ Deliverable: pipeline completa di proposta→review→promozione identity.
 - Vertical heartbeat verso platform registry.
 - Pagine web vertical (volley-web) + API pubbliche.
 
-Deliverable: volley consultabile e “sopravvive” in read-only quando platform down (target).
+_Deliverable_: volley consultabile e “sopravvive” in read-only quando platform down (target).
 
 ### 7.5 — Scalare a Sport 2 (Football) con processo replicabile
 
@@ -446,7 +487,7 @@ Deliverable: volley consultabile e “sopravvive” in read-only quando platform
   - compose snippet
 - Verifica che l’aggiunta sport richieda pochi passaggi ripetibili.
 
-Deliverable: “aggiungere sport” diventa una checklist.
+_Deliverable_: “aggiungere sport” diventa una checklist.
 
 ### 7.6 — Event vertical (multi-sport) (opzionale dopo 2 sport)
 
@@ -454,7 +495,7 @@ Deliverable: “aggiungere sport” diventa una checklist.
 - Link debole event↔sport (discipline mapping).
 - Partecipanti evento sempre Org core.
 
-Deliverable: struttura pronta per olimpico/universiade.
+_Deliverable_: struttura pronta per olimpico/universiade.
 
 ### 7.7 — Ingestion/ETL (quando i dati manuali non bastano)
 
@@ -462,14 +503,14 @@ Deliverable: struttura pronta per olimpico/universiade.
 - Pipeline: fetch → normalize → propose to inbox → approve → persist.
 - Rate limiting, retry, idempotenza ingestion.
 
-Deliverable: ingest semi-automatizzato con governance.
+_Deliverable_: ingest semi-automatizzato con governance.
 
 ### 7.8 — Osservabilità “seria”
 
 - OpenTelemetry (strumentazione Django) + backend traces.
 - Dashboard base (error rate, latency, heartbeat freshness).
 
-Deliverable: debug cross-servizi “da adulti”.
+_Deliverable_: debug cross-servizi “da adulti”.
 
 ## 8. Dev Links (local)
 
