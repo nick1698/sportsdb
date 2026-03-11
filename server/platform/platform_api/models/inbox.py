@@ -44,7 +44,7 @@ class EditRequestsInbox(GrowingTable):
         on_delete=models.PROTECT,
         related_name="inbox_requests",
     )
-    vertical_entity_id = models.UUIDField(null=True, blank=True)
+    vertical_entity_id = models.UUIDField()
 
     target_entity_id = models.UUIDField(
         null=True,

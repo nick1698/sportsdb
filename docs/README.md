@@ -476,32 +476,31 @@ _Deliverable_: il vertical può referenziare identity core in modo sicuro e il p
 
 Deliverable: contratto funzionale Inbox chiarito e non ambiguo.
 
-#### 7.3.1 — Model Django definitivo InboxRequest
+#### 7.3.1 — Model Django definitivo Inbox: `edit_requests_inbox`
 
-- [ ] Definire il model definitivo della Inbox
-- [ ] Confermare naming finale del model
-- [ ] Confermare enum minime per action e status
-- [ ] Confermare campi obbligatori vs nullable
-- [ ] Confermare indici MVP
-- [ ] Allineare admin, schema SQL e README
+- [x] Definire il model definitivo della Inbox
+- [x] Confermare naming finale del model
+- [x] Confermare enum minime per action e status
+- [x] Confermare campi obbligatori vs nullable
+- [x] Confermare indici MVP
+- [x] Allineare admin, schema SQL e README
 
-Campi MVP attesi (nomi da adattare se già decisi diversamente):
+##### Campi MVP attesi
 
 - `id`
-- `entity_kind`
-- `action_type` (`create`, `update`, `link`, `merge`)
-- `status` (`pending`, `approved`, `rejected`, `cancelled`)
-- `vertical_slug`
-- `target_platform_id` nullable
-- `payload` JSON
-- `resolution_payload` nullable
-- `rejection_reason` nullable
-- `created_by`
-- `reviewed_by` nullable
-- `created_at`
-- `reviewed_at` nullable
+- `entity_type`: (`org`, `person`, `location`, `venue`)
+- `action`: (`create`, `update`, `merge`)
+- `status`: (`pending`, `approved`, `rejected`, `duplicate`, `applied`)
+- `vertical_entity_id`: not null
+- `target_entity_id`: nullable solo per create
+- `payload`: JSONfield not null
+- `created_by`: fk -> `User`; not null
+- `finalised_by`: fk -> `User`; nullable
+- `ts_taken_in_charge`: nullable
+- `ts_review_completed`: nullable
+- `review_notes`
 
-Indici MVP attesi:
+##### Indici MVP attesi
 
 - per stato
 - per tipo entità
@@ -509,6 +508,8 @@ Indici MVP attesi:
 - per target_platform_id
 - per data creazione
 - eventuale indice composito su `(status, entity_kind, created_at)`
+
+---
 
 Deliverable: modello Inbox stabile e migrabile.
 
