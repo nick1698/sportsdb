@@ -515,27 +515,76 @@ Deliverable: modello Inbox stabile e migrabile.
 
 #### 7.3.2 — State machine e regole di transizione
 
-- [ ] Definire gli stati ammessi
-- [ ] Definire le transizioni lecite
-- [ ] Bloccare le transizioni invalide lato service
-- [ ] Definire idempotenza minima delle azioni di review
-- [ ] Definire semantica di reviewed_by e reviewed_at
+La Inbox usa una macchina a stati chiusa per rappresentare il ciclo di vita
+di una proposta di creazione o modifica alle entità core. Gli eventi tracciano 
+le azioni avvenute sulla request, mentre il campo `status` ne rappresenta 
+lo stato corrente sintetico.
 
-Transizioni MVP consigliate:
+##### Stati supportati
+
+- `pending` — richiesta aperta e ancora da valutare
+- `rejected` — richiesta respinta
+- `duplicate` — richiesta chiusa come duplicato
+- `approved` — richiesta approvata sul piano editoriale, ma non ancora applicata al core
+- `applied` — modifica propagata con successo
+
+##### Eventi rilevanti
+
+- `creation` = creazione
+- `comment` = solo commento
+- `data_editing` = modifiche al payload
+- `rejected` = chiusura richiesta per dati incorretti
+- `duplicate` = chiusura richiesta perché duplicata
+- `approved` = approvazione dati richiesta (ancora modificabili)
+- `applied` = chiusura richiesta per dati corretti e modifiche propagate
+
+##### Mapping evento -> status
+
+- `created` imposta `status = pending`
+- `approved` imposta `status = approved`
+- `rejected` imposta `status = rejected`
+- `duplicate` imposta `status = duplicate`
+- `applied` imposta `status = applied`
+- `comment` e `data_editing` non cambiano lo status
+
+##### Transizioni ammesse
 
 - `pending -> approved`
 - `pending -> rejected`
-- `pending -> cancelled`
+- `pending -> duplicate`
+- `approved -> applied`
 
-Regole MVP:
+##### Regole MVP
 
-- una richiesta non pending non può essere ri-reviewata
-- `approved` e `rejected` valorizzano reviewer e review timestamp
-- `cancelled` è ammesso solo se ha senso lato prodotto; altrimenti ometterlo
-- niente ritorno a `pending` nel MVP
-- niente soft-delete logico implicito nelle review actions
+- ogni request nasce con evento `created` e stato `pending`
+- qualunque utente con permessi adeguati può aggiungere `comment` finché la request non è chiusa
+- l’evento `data_editing` di modifiche al payload è ammesso sia in `pending` sia in `approved`
+- solo le request `pending` possono ricevere una decisione finale di check
+- `approved`, `rejected` e `duplicate` chiudono la fase di check
+- `applied` è ammesso solo dopo `approved`
+- non è ammesso il ritorno a `pending`
+- `rejected`, `duplicate` e `applied` sono stati terminali
 
-Deliverable: macchina a stati chiusa e verificabile nei test.
+##### Audit minimo
+
+Campi di audit previsti sulla tabella principale `edit_requests_inbox`:
+
+- `changelog` — testo libero per tracciare note sintetiche o motivazioni
+- `created_by` — utente che apre la request
+- `taken_in_charge_by` — utente che si assume la responsabilità della decisione di check
+- `ts_taken_in_charge` — timestamp della presa in carico
+- `finalised_by` — utente che finalizza definitivamente la request applicandola al core
+- `ts_finalised` — timestamp della finalizzazione definitiva
+
+Regole MVP sui campi di audit:
+
+- `created` valorizza `created_by`
+- un evento `approved`, `rejected` o `duplicate` valorizza automaticamente `taken_in_charge_by` e `ts_taken_in_charge` se non ancora presenti
+- `taken_in_charge_by` e `ts_taken_in_charge` possono restare null solo finché la request è `pending`
+- `applied` valorizza `finalised_by` e `ts_finalised`
+- `finalised_by` e `ts_finalised` sono obbligatori solo con stato `applied`
+
+_Deliverable_: state machine chiusa, coerente con workflow, audit fields e transizioni verificabili nei test.
 
 #### 7.3.3 — Service layer Inbox (dominio applicativo)
 
