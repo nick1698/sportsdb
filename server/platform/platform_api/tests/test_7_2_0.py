@@ -1,5 +1,6 @@
 import uuid
 
+from django.forms import ValidationError
 from django.test import TestCase, TransactionTestCase
 from django.db import IntegrityError, transaction
 from django.contrib.auth import get_user_model
@@ -112,9 +113,10 @@ class PresenceConstraintTests(TestCase):
 class InboxFlowTests(TransactionTestCase):
     @print_exit("Inbox contracts")
     def test_inbox_contracts(self):
+        sport = _mk_sport()
+        user = _mk_user("inbox_tester1")
+        
         with subtest(self, "Inbox CREATE: auto event CREATED on commit"):
-            user = _mk_user("inbox_tester1")
-            sport = _mk_sport()
 
             req = EditRequestsInbox.objects.create(
                 entity_type=EntityType.PERSON,
@@ -122,7 +124,7 @@ class InboxFlowTests(TransactionTestCase):
                 status=RequestStatus.PENDING,
                 sport=sport,
                 vertical_entity_id=uuid.uuid4(),
-                target_entity_id=None,  # ok for CREATE :contentReference[oaicite:1]{index=1}
+                target_entity_id=None,
                 payload={"given_name": "Ada", "family_name": "Lovelace"},
                 created_by=user,
             )
@@ -134,15 +136,16 @@ class InboxFlowTests(TransactionTestCase):
             self.assertEqual(created_events.first().actor_id, user.id)
 
         with subtest(self, "Inbox UPDATE: target required (check constraint)"):
-            user = _mk_user("inbox_tester2")
+            req = EditRequestsInbox(
+                entity_type=EntityType.ORG,
+                action=RequestedAction.UPDATE,
+                status=RequestStatus.PENDING,
+                sport=sport,
+                vertical_entity_id="11111111-1111-1111-1111-111111111111",
+                target_entity_id=None,
+                payload={"official_name": "Volley Milano"},
+                created_by=user,
+            )
 
-            with self.assertRaises(IntegrityError):
-                with transaction.atomic():
-                    EditRequestsInbox.objects.create(
-                        entity_type=EntityType.PERSON,
-                        action=RequestedAction.UPDATE,
-                        status=RequestStatus.PENDING,
-                        target_entity_id=None,  # NOT allowed for UPDATE/MERGE :contentReference[oaicite:2]{index=2}
-                        payload={"nickname": "NewNick"},
-                        created_by=user,
-                    )
+            with self.assertRaises(ValidationError):
+                req.full_clean()

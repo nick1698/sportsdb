@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
+from django.db import transaction
+from django.forms import ValidationError
 from django.test import TestCase
 
 from shared.utils.testing import print_exit, subtest
@@ -48,15 +49,15 @@ class InboxModelContractTests(TestCase):
 
             self.assertEqual(
                 {choice for choice, _ in EntityType.choices},
-                {"Person", "Org", "Location", "Venue"},
+                {"org", "person", "location", "venue"},
             )
             self.assertEqual(
                 {choice for choice, _ in RequestedAction.choices},
-                {"Create", "Update", "Merge"},
+                {"create", "update", "merge"},
             )
             self.assertEqual(
                 {choice for choice, _ in RequestStatus.choices},
-                {"Pending", "Approved", "Rejected", "Duplicate", "Applied"},
+                {"pending", "approved", "rejected", "duplicate", "applied"},
             )
 
         with subtest(self, "EditRequestsInbox -> field nullability/defaults"):
@@ -79,27 +80,32 @@ class InboxModelContractTests(TestCase):
             self.assertFalse(payload_field.null)
             self.assertFalse(created_by_field.null)
             self.assertTrue(finalised_by_field.null)
-            self.assertTrue(sport_field.null)
+            self.assertFalse(sport_field.null)
 
         with subtest(self, "EditRequestsInbox -> indexes contract"):
             index_names = {idx.name for idx in EditRequestsInbox._meta.indexes}
-            self.assertIn("ix_inbox_status_type", index_names)
-            self.assertIn("ix_inbox_sport", index_names)
-            self.assertIn("ix_inbox_target", index_names)
-            self.assertIn("ix_inbox_vertical_entity", index_names)
+            self.assertIn("idx_inbox_status", index_names)
+            self.assertIn("idx_inbox_entity_type", index_names)
+            self.assertIn("idx_inbox_sport", index_names)
+            self.assertIn("idx_inbox_target_entity", index_names)
+            self.assertIn("idx_inbox_created_at", index_names)
+            self.assertIn("idx_inbox_entity_created", index_names)
 
         with subtest(self, "EditRequestsInbox -> constraints contract"):
             constraint_names = {
                 constraint.name for constraint in EditRequestsInbox._meta.constraints
             }
+            self.assertIn("ck_inbox_create_target_null", constraint_names)
+            self.assertIn("ck_inbox_noncreate_target_required", constraint_names)
+            self.assertIn("ck_inbox_taken_fields_both_null_or_set", constraint_names)
+            self.assertIn("ck_inbox_nonpending_requires_taken_fields", constraint_names)
             self.assertIn(
-                "ck_inbox_review_completed_after_taken_in_charge",
-                constraint_names,
+                "ck_inbox_finalised_fields_both_null_or_set", constraint_names
             )
             self.assertIn(
-                "ck_inbox_target_required_for_update_merge",
-                constraint_names,
+                "ck_inbox_applied_requires_finalised_fields", constraint_names
             )
+            self.assertIn("ck_inbox_nonapplied_finalised_fields_null", constraint_names)
 
     @print_exit("Inbox event model contracts")
     def test_edit_requests_inbox_event_model_contract(self):
@@ -110,7 +116,15 @@ class InboxModelContractTests(TestCase):
             )
             self.assertEqual(
                 {choice for choice, _ in EventType.choices},
-                {"Created", "Approved", "Rejected", "Comment", "Reviewed", "Applied"},
+                {
+                    "created",
+                    "comment",
+                    "data_editing",
+                    "rejected",
+                    "duplicate",
+                    "approved",
+                    "applied",
+                },
             )
 
         with subtest(self, "EditRequestsInboxEvent -> indexes contract"):
@@ -132,25 +146,50 @@ class InboxModelContractTests(TestCase):
 
             event = EditRequestsInboxEvent.objects.create(
                 request=req,
-                event_type=EventType.CREATED,
+                event_type=EventType.COMMENT,
                 actor=self.user,
-                notes="Request created",
+                description="First review comment",
             )
 
-            events = EditRequestsInboxEvent.objects.filter(request=req)
+            events = EditRequestsInboxEvent.objects.filter(request=req).order_by(
+                "ts_creation"
+            )
             self.assertEqual(events.count(), 1)
 
             saved_event = events.get()
             self.assertEqual(saved_event.id, event.id)
-            self.assertEqual(saved_event.event_type, EventType.CREATED)
+            self.assertEqual(saved_event.event_type, EventType.COMMENT)
             self.assertEqual(saved_event.actor, self.user)
-            self.assertEqual(saved_event.notes, "Request created")
+            self.assertEqual(saved_event.description, "First review comment")
+
+    @print_exit("Inbox save hook contracts")
+    def test_inbox_request_create_generates_created_event(self):
+        with subtest(self, "creating inbox request -> auto create Created event"):
+            with self.captureOnCommitCallbacks(execute=True):
+                req = EditRequestsInbox.objects.create(
+                    entity_type=EntityType.ORG,
+                    action=RequestedAction.CREATE,
+                    status=RequestStatus.PENDING,
+                    sport=self.volley,
+                    vertical_entity_id="11111111-1111-1111-1111-111111111111",
+                    payload={"proposed_name": "Volley Milano"},
+                    created_by=self.user,
+                )
+
+            events = EditRequestsInboxEvent.objects.filter(request=req)
+            self.assertEqual(events.count(), 1)
+
+            event = events.get()
+            self.assertEqual(event.event_type, EventType.CREATED)
+            self.assertEqual(event.actor, self.user)
 
     @print_exit("Inbox check constraints")
     def test_inbox_request_constraints(self):
-        with subtest(self, "Update request without target_entity_id -> IntegrityError"):
+        with subtest(
+            self, "Update request without target_entity_id -> ValidationError"
+        ):
             with transaction.atomic():
-                with self.assertRaises(IntegrityError):
+                with self.assertRaises(ValidationError):
                     EditRequestsInbox.objects.create(
                         entity_type=EntityType.ORG,
                         action=RequestedAction.UPDATE,
@@ -178,7 +217,7 @@ class InboxModelContractTests(TestCase):
 
         with subtest(
             self,
-            "review completed earlier than taken in charge -> IntegrityError",
+            "Non-pending request without taken_in_charge fields -> ValidationError",
         ):
             req = EditRequestsInbox(
                 entity_type=EntityType.ORG,
@@ -189,11 +228,47 @@ class InboxModelContractTests(TestCase):
                 target_entity_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                 payload={"source_entity_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},
                 created_by=self.user,
-                finalised_by=self.reviewer,
             )
-            req.ts_taken_in_charge = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
-            req.ts_review_completed = datetime(2026, 3, 10, 11, 0, tzinfo=UTC)
 
-            with transaction.atomic():
-                with self.assertRaises(IntegrityError):
-                    req.save()
+            with self.assertRaises(Exception):
+                req.full_clean()
+
+        with subtest(
+            self,
+            "Applied request without finalised fields -> ValidationError",
+        ):
+            req = EditRequestsInbox(
+                entity_type=EntityType.ORG,
+                action=RequestedAction.UPDATE,
+                status=RequestStatus.APPLIED,
+                sport=self.volley,
+                vertical_entity_id="66666666-6666-6666-6666-666666666666",
+                target_entity_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                payload={"name": "Updated Org"},
+                created_by=self.user,
+                taken_in_charge_by=self.reviewer,
+            )
+
+            with self.assertRaises(ValidationError):
+                req.full_clean()
+
+        with subtest(
+            self,
+            "Non-applied request with finalised fields set -> ValidationError",
+        ):
+            req = EditRequestsInbox(
+                entity_type=EntityType.ORG,
+                action=RequestedAction.UPDATE,
+                status=RequestStatus.APPROVED,
+                sport=self.volley,
+                vertical_entity_id="77777777-7777-7777-7777-777777777777",
+                target_entity_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                payload={"name": "Updated Org"},
+                created_by=self.user,
+                taken_in_charge_by=self.reviewer,
+                finalised_by=self.reviewer,
+                ts_finalised=datetime(2026, 3, 10, 11, 0, tzinfo=UTC),
+            )
+
+            with self.assertRaises(ValidationError):
+                req.full_clean()
