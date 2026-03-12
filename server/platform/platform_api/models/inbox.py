@@ -1,9 +1,11 @@
 import uuid
+
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 from django.forms import ValidationError
 from django.utils import timezone
+
 from shared.utils.models import GrowingTable
 
 
@@ -233,10 +235,13 @@ class EditRequestsInbox(GrowingTable):
         super().save(*args, **kwargs)
 
         def create_created_event():
-            EditRequestsInboxEvent.objects.get_or_create(
+            t_str = self.ts_creation.isoformat(sep=" ", timespec="seconds")
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=self.ts_creation,
                 request=self,
                 event_type=EventType.CREATED,
-                defaults={"actor": self.created_by},
+                actor=self.created_by,
+                description=f"{t_str}: Edit request created by {self.created_by}"
             )
 
         if is_new:
