@@ -8,132 +8,258 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('platform_api', '0007_alter_editrequestsinbox_vertical_entity_id'),
+        ("platform_api", "0007_alter_editrequestsinbox_vertical_entity_id"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='editrequestsinbox',
-            name='ck_inbox_review_completed_after_taken_in_charge',
+            model_name="editrequestsinbox",
+            name="ck_inbox_review_completed_after_taken_in_charge",
         ),
         migrations.RemoveConstraint(
-            model_name='editrequestsinbox',
-            name='ck_inbox_target_required_for_update_merge',
+            model_name="editrequestsinbox",
+            name="ck_inbox_target_required_for_update_merge",
         ),
         migrations.RemoveIndex(
-            model_name='editrequestsinbox',
-            name='ix_inbox_status_type',
+            model_name="editrequestsinbox",
+            name="ix_inbox_status_type",
         ),
         migrations.RemoveIndex(
-            model_name='editrequestsinbox',
-            name='ix_inbox_vertical_entity',
+            model_name="editrequestsinbox",
+            name="ix_inbox_vertical_entity",
         ),
         migrations.RenameIndex(
-            model_name='editrequestsinbox',
-            new_name='idx_inbox_sport',
-            old_name='ix_inbox_sport',
+            model_name="editrequestsinbox",
+            new_name="idx_inbox_sport",
+            old_name="ix_inbox_sport",
         ),
         migrations.RenameIndex(
-            model_name='editrequestsinbox',
-            new_name='idx_inbox_target_entity',
-            old_name='ix_inbox_target',
+            model_name="editrequestsinbox",
+            new_name="idx_inbox_target_entity",
+            old_name="ix_inbox_target",
         ),
         migrations.RemoveField(
-            model_name='editrequestsinbox',
-            name='review_notes',
+            model_name="editrequestsinbox",
+            name="review_notes",
         ),
         migrations.RemoveField(
-            model_name='editrequestsinbox',
-            name='ts_review_completed',
+            model_name="editrequestsinbox",
+            name="ts_review_completed",
         ),
         migrations.AddField(
-            model_name='editrequestsinbox',
-            name='changelog',
-            field=models.TextField(blank=True, default=''),
+            model_name="editrequestsinbox",
+            name="changelog",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AddField(
-            model_name='editrequestsinbox',
-            name='taken_in_charge_by',
-            field=models.ForeignKey(blank=True, help_text='NOTE: only nullable with PENDING status', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='edit_request_taken_in_charge', to=settings.AUTH_USER_MODEL),
+            model_name="editrequestsinbox",
+            name="taken_in_charge_by",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="NOTE: only nullable with PENDING status",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="edit_request_taken_in_charge",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='editrequestsinbox',
-            name='ts_finalised',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='Request applied at'),
+            model_name="editrequestsinbox",
+            name="ts_finalised",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="Request applied at"
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='action',
-            field=models.CharField(choices=[('create', 'Create'), ('update', 'Update'), ('merge', 'Merge')], max_length=32),
+            model_name="editrequestsinbox",
+            name="action",
+            field=models.CharField(
+                choices=[
+                    ("create", "Create"),
+                    ("update", "Update"),
+                    ("merge", "Merge"),
+                ],
+                max_length=32,
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='entity_type',
-            field=models.CharField(choices=[('org', 'Org'), ('person', 'Person'), ('location', 'Location'), ('venue', 'Venue')], max_length=32),
+            model_name="editrequestsinbox",
+            name="entity_type",
+            field=models.CharField(
+                choices=[
+                    ("org", "Org"),
+                    ("person", "Person"),
+                    ("location", "Location"),
+                    ("venue", "Venue"),
+                ],
+                max_length=32,
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='finalised_by',
-            field=models.ForeignKey(blank=True, help_text='NOTE: not null with APPLIED status', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='edit_request_finalized', to=settings.AUTH_USER_MODEL, verbose_name='Request applied by'),
+            model_name="editrequestsinbox",
+            name="finalised_by",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="NOTE: not null with APPLIED status",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="edit_request_finalized",
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="Request applied by",
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='sport',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='inbox_requests', to='platform_api.sport'),
+            model_name="editrequestsinbox",
+            name="sport",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="inbox_requests",
+                to="platform_api.sport",
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('duplicate', 'Duplicate'), ('applied', 'Applied')], default='pending', max_length=32),
+            model_name="editrequestsinbox",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("approved", "Approved"),
+                    ("rejected", "Rejected"),
+                    ("duplicate", "Duplicate"),
+                    ("applied", "Applied"),
+                ],
+                default="pending",
+                max_length=32,
+            ),
         ),
         migrations.AlterField(
-            model_name='editrequestsinboxevent',
-            name='event_type',
-            field=models.CharField(choices=[('Created', 'Created'), ('Rejected', 'Rejected'), ('Duplicate', 'Duplicate'), ('Approved', 'Approved'), ('Comment', 'Comment'), ('Reviewed', 'Reviewed'), ('Applied', 'Applied')], max_length=16),
+            model_name="editrequestsinboxevent",
+            name="event_type",
+            field=models.CharField(
+                choices=[
+                    ("Created", "Created"),
+                    ("Rejected", "Rejected"),
+                    ("Duplicate", "Duplicate"),
+                    ("Approved", "Approved"),
+                    ("Comment", "Comment"),
+                    ("Reviewed", "Reviewed"),
+                    ("Applied", "Applied"),
+                ],
+                max_length=16,
+            ),
         ),
         migrations.AddIndex(
-            model_name='editrequestsinbox',
-            index=models.Index(fields=['status'], name='idx_inbox_status'),
+            model_name="editrequestsinbox",
+            index=models.Index(fields=["status"], name="idx_inbox_status"),
         ),
         migrations.AddIndex(
-            model_name='editrequestsinbox',
-            index=models.Index(fields=['entity_type'], name='idx_inbox_entity_type'),
+            model_name="editrequestsinbox",
+            index=models.Index(fields=["entity_type"], name="idx_inbox_entity_type"),
         ),
         migrations.AddIndex(
-            model_name='editrequestsinbox',
-            index=models.Index(fields=['ts_creation'], name='idx_inbox_created_at'),
+            model_name="editrequestsinbox",
+            index=models.Index(fields=["ts_creation"], name="idx_inbox_created_at"),
         ),
         migrations.AddIndex(
-            model_name='editrequestsinbox',
-            index=models.Index(fields=['status', 'entity_type', 'ts_creation'], name='idx_inbox_entity_created'),
+            model_name="editrequestsinbox",
+            index=models.Index(
+                fields=["status", "entity_type", "ts_creation"],
+                name="idx_inbox_entity_created",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('action', 'create'), _negated=True), ('target_entity_id__isnull', True), _connector='OR'), name='ck_inbox_create_target_null'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(("action", "create"), _negated=True),
+                    ("target_entity_id__isnull", True),
+                    _connector="OR",
+                ),
+                name="ck_inbox_create_target_null",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(('action', 'create'), ('target_entity_id__isnull', False), _connector='OR'), name='ck_inbox_noncreate_target_required'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("action", "create"),
+                    ("target_entity_id__isnull", False),
+                    _connector="OR",
+                ),
+                name="ck_inbox_noncreate_target_required",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('taken_in_charge_by__isnull', True), ('ts_taken_in_charge__isnull', True)), models.Q(('taken_in_charge_by__isnull', False), ('ts_taken_in_charge__isnull', False)), _connector='OR'), name='ck_inbox_taken_fields_both_null_or_set'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(
+                        ("taken_in_charge_by__isnull", True),
+                        ("ts_taken_in_charge__isnull", True),
+                    ),
+                    models.Q(
+                        ("taken_in_charge_by__isnull", False),
+                        ("ts_taken_in_charge__isnull", False),
+                    ),
+                    _connector="OR",
+                ),
+                name="ck_inbox_taken_fields_both_null_or_set",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(('status', 'pending'), models.Q(('taken_in_charge_by__isnull', False), ('ts_taken_in_charge__isnull', False)), _connector='OR'), name='ck_inbox_nonpending_requires_taken_fields'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("status", "pending"),
+                    models.Q(
+                        ("taken_in_charge_by__isnull", False),
+                        ("ts_taken_in_charge__isnull", False),
+                    ),
+                    _connector="OR",
+                ),
+                name="ck_inbox_nonpending_requires_taken_fields",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('finalised_by__isnull', True), ('ts_finalised__isnull', True)), models.Q(('finalised_by__isnull', False), ('ts_finalised__isnull', False)), _connector='OR'), name='ck_inbox_finalised_fields_both_null_or_set'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(
+                        ("finalised_by__isnull", True), ("ts_finalised__isnull", True)
+                    ),
+                    models.Q(
+                        ("finalised_by__isnull", False), ("ts_finalised__isnull", False)
+                    ),
+                    _connector="OR",
+                ),
+                name="ck_inbox_finalised_fields_both_null_or_set",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('status', 'applied'), _negated=True), models.Q(('finalised_by__isnull', False), ('ts_finalised__isnull', False)), _connector='OR'), name='ck_inbox_applied_requires_finalised_fields'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(("status", "applied"), _negated=True),
+                    models.Q(
+                        ("finalised_by__isnull", False), ("ts_finalised__isnull", False)
+                    ),
+                    _connector="OR",
+                ),
+                name="ck_inbox_applied_requires_finalised_fields",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='editrequestsinbox',
-            constraint=models.CheckConstraint(condition=models.Q(('status', 'applied'), models.Q(('finalised_by__isnull', True), ('ts_finalised__isnull', True)), _connector='OR'), name='ck_inbox_nonapplied_finalised_fields_null'),
+            model_name="editrequestsinbox",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("status", "applied"),
+                    models.Q(
+                        ("finalised_by__isnull", True), ("ts_finalised__isnull", True)
+                    ),
+                    _connector="OR",
+                ),
+                name="ck_inbox_nonapplied_finalised_fields_null",
+            ),
         ),
     ]

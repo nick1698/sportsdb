@@ -516,8 +516,8 @@ Deliverable: modello Inbox stabile e migrabile.
 #### 7.3.2 — State machine e regole di transizione
 
 La Inbox usa una macchina a stati chiusa per rappresentare il ciclo di vita
-di una proposta di creazione o modifica alle entità core. Gli eventi tracciano 
-le azioni avvenute sulla request, mentre il campo `status` ne rappresenta 
+di una proposta di creazione o modifica alle entità core. Gli eventi tracciano
+le azioni avvenute sulla request, mentre il campo `status` ne rappresenta
 lo stato corrente sintetico.
 
 ##### Stati supportati

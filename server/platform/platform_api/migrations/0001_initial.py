@@ -10,157 +10,388 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Country',
+            name="Country",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('iso2', models.CharField(max_length=2, primary_key=True, serialize=False)),
-                ('iso3', models.CharField(max_length=3, unique=True)),
-                ('numeric_code', models.SmallIntegerField(unique=True)),
-                ('name_en', models.TextField()),
-                ('name_local', models.TextField(blank=True, null=True)),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                (
+                    "iso2",
+                    models.CharField(max_length=2, primary_key=True, serialize=False),
+                ),
+                ("iso3", models.CharField(max_length=3, unique=True)),
+                ("numeric_code", models.SmallIntegerField(unique=True)),
+                ("name_en", models.TextField()),
+                ("name_local", models.TextField(blank=True, null=True)),
             ],
             options={
-                'verbose_name_plural': 'countries',
-                'db_table': 'country',
-                'indexes': [models.Index(fields=['name_en'], name='idx_country_name_en')],
+                "verbose_name_plural": "countries",
+                "db_table": "country",
+                "indexes": [
+                    models.Index(fields=["name_en"], name="idx_country_name_en")
+                ],
             },
         ),
         migrations.CreateModel(
-            name='GeoPlace',
+            name="GeoPlace",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.TextField()),
-                ('normalized_name', models.TextField(unique=True)),
-                ('kind', models.CharField(choices=[('locality', 'Locality'), ('region', 'Region'), ('state', 'State'), ('province', 'Province'), ('county', 'County'), ('municipality', 'Municipality'), ('city', 'City'), ('village', 'Village'), ('district', 'District'), ('neighborhood', 'Neighborhood')], default='locality', max_length=20)),
-                ('lat', models.FloatField(blank=True, null=True, verbose_name='Latitude')),
-                ('lon', models.FloatField(blank=True, null=True, verbose_name='Longitude')),
-                ('timezone', models.TextField(blank=True, null=True)),
-                ('country', models.ForeignKey(db_column='country_id', on_delete=django.db.models.deletion.PROTECT, related_name='geo_places', to='platform_api.country')),
-                ('parent', models.ForeignKey(blank=True, db_column='parent_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='children', to='platform_api.geoplace')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.TextField()),
+                ("normalized_name", models.TextField(unique=True)),
+                (
+                    "kind",
+                    models.CharField(
+                        choices=[
+                            ("locality", "Locality"),
+                            ("region", "Region"),
+                            ("state", "State"),
+                            ("province", "Province"),
+                            ("county", "County"),
+                            ("municipality", "Municipality"),
+                            ("city", "City"),
+                            ("village", "Village"),
+                            ("district", "District"),
+                            ("neighborhood", "Neighborhood"),
+                        ],
+                        default="locality",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "lat",
+                    models.FloatField(blank=True, null=True, verbose_name="Latitude"),
+                ),
+                (
+                    "lon",
+                    models.FloatField(blank=True, null=True, verbose_name="Longitude"),
+                ),
+                ("timezone", models.TextField(blank=True, null=True)),
+                (
+                    "country",
+                    models.ForeignKey(
+                        db_column="country_id",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="geo_places",
+                        to="platform_api.country",
+                    ),
+                ),
+                (
+                    "parent",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="parent_id",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="children",
+                        to="platform_api.geoplace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'geo_place',
+                "db_table": "geo_place",
             },
         ),
         migrations.CreateModel(
-            name='Org',
+            name="Org",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('type', models.SmallIntegerField(choices=[(1, 'nation'), (2, 'club')], default=1)),
-                ('name', models.TextField()),
-                ('short_name', models.TextField()),
-                ('date_foundation', models.DateField(blank=True, null=True)),
-                ('website', models.TextField(blank=True, null=True)),
-                ('is_active', models.BooleanField(default=True)),
-                ('country', models.ForeignKey(db_column='country_id', on_delete=django.db.models.deletion.PROTECT, related_name='orgs', to='platform_api.country')),
-                ('home_geo_place', models.ForeignKey(blank=True, db_column='home_geo_place_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='orgs_home', to='platform_api.geoplace')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "type",
+                    models.SmallIntegerField(
+                        choices=[(1, "nation"), (2, "club")], default=1
+                    ),
+                ),
+                ("name", models.TextField()),
+                ("short_name", models.TextField()),
+                ("date_foundation", models.DateField(blank=True, null=True)),
+                ("website", models.TextField(blank=True, null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "country",
+                    models.ForeignKey(
+                        db_column="country_id",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="orgs",
+                        to="platform_api.country",
+                    ),
+                ),
+                (
+                    "home_geo_place",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="home_geo_place_id",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="orgs_home",
+                        to="platform_api.geoplace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'org',
+                "db_table": "org",
             },
         ),
         migrations.CreateModel(
-            name='Person',
+            name="Person",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('given_name', models.TextField()),
-                ('family_name', models.TextField()),
-                ('nickname', models.TextField(blank=True, null=True)),
-                ('sex', models.SmallIntegerField(choices=[(1, 'female'), (2, 'male'), (3, 'other')])),
-                ('birth_date', models.DateField(blank=True, null=True)),
-                ('death_date', models.DateField(blank=True, null=True)),
-                ('birth_place', models.ForeignKey(blank=True, db_column='birth_geo_place_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='people_born_in_place', to='platform_api.geoplace')),
-                ('primary_nationality', models.ForeignKey(db_column='primary_nationality_id', on_delete=django.db.models.deletion.PROTECT, related_name='people_primary_nat', to='platform_api.country')),
-                ('sporting_nationality', models.ForeignKey(blank=True, db_column='sporting_nationality_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='people_sporting_nat', to='platform_api.country')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("given_name", models.TextField()),
+                ("family_name", models.TextField()),
+                ("nickname", models.TextField(blank=True, null=True)),
+                (
+                    "sex",
+                    models.SmallIntegerField(
+                        choices=[(1, "female"), (2, "male"), (3, "other")]
+                    ),
+                ),
+                ("birth_date", models.DateField(blank=True, null=True)),
+                ("death_date", models.DateField(blank=True, null=True)),
+                (
+                    "birth_place",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="birth_geo_place_id",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="people_born_in_place",
+                        to="platform_api.geoplace",
+                    ),
+                ),
+                (
+                    "primary_nationality",
+                    models.ForeignKey(
+                        db_column="primary_nationality_id",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="people_primary_nat",
+                        to="platform_api.country",
+                    ),
+                ),
+                (
+                    "sporting_nationality",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="sporting_nationality_id",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="people_sporting_nat",
+                        to="platform_api.country",
+                    ),
+                ),
             ],
             options={
-                'verbose_name_plural': 'people',
-                'db_table': 'person',
+                "verbose_name_plural": "people",
+                "db_table": "person",
             },
         ),
         migrations.CreateModel(
-            name='Sport',
+            name="Sport",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('key', models.TextField(primary_key=True, serialize=False)),
-                ('name_en', models.TextField()),
-                ('description', models.TextField(blank=True, null=True, verbose_name='Brief description')),
-                ('rules', models.TextField(blank=True, null=True, verbose_name='NOTE: preferably in English')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                ("key", models.TextField(primary_key=True, serialize=False)),
+                ("name_en", models.TextField()),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True, null=True, verbose_name="Brief description"
+                    ),
+                ),
+                (
+                    "rules",
+                    models.TextField(
+                        blank=True,
+                        null=True,
+                        verbose_name="NOTE: preferably in English",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'sport',
-                'indexes': [models.Index(fields=['name_en'], name='idx_sport_name_en')],
+                "db_table": "sport",
+                "indexes": [models.Index(fields=["name_en"], name="idx_sport_name_en")],
             },
         ),
         migrations.CreateModel(
-            name='Venue',
+            name="Venue",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('ts_last_update', models.DateTimeField(auto_now=True)),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.TextField()),
-                ('short_name', models.TextField(blank=True, null=True)),
-                ('address_line', models.TextField(blank=True, null=True)),
-                ('postal_code', models.CharField(blank=True, max_length=16, null=True)),
-                ('lat', models.FloatField(blank=True, null=True)),
-                ('lon', models.FloatField(blank=True, null=True)),
-                ('capacity', models.IntegerField(blank=True, null=True)),
-                ('date_opening', models.DateField(blank=True, null=True)),
-                ('is_active', models.BooleanField(default=True)),
-                ('country', models.ForeignKey(db_column='country_id', on_delete=django.db.models.deletion.PROTECT, related_name='venues', to='platform_api.country')),
-                ('geo_place', models.ForeignKey(blank=True, db_column='geo_place_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='venues', to='platform_api.geoplace')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, editable=False
+                    ),
+                ),
+                ("ts_last_update", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.TextField()),
+                ("short_name", models.TextField(blank=True, null=True)),
+                ("address_line", models.TextField(blank=True, null=True)),
+                ("postal_code", models.CharField(blank=True, max_length=16, null=True)),
+                ("lat", models.FloatField(blank=True, null=True)),
+                ("lon", models.FloatField(blank=True, null=True)),
+                ("capacity", models.IntegerField(blank=True, null=True)),
+                ("date_opening", models.DateField(blank=True, null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "country",
+                    models.ForeignKey(
+                        db_column="country_id",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="venues",
+                        to="platform_api.country",
+                    ),
+                ),
+                (
+                    "geo_place",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="geo_place_id",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="venues",
+                        to="platform_api.geoplace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'venue',
+                "db_table": "venue",
             },
         ),
         migrations.AddIndex(
-            model_name='geoplace',
-            index=models.Index(fields=['country', 'kind', 'normalized_name'], name='idx_geo_place_search'),
+            model_name="geoplace",
+            index=models.Index(
+                fields=["country", "kind", "normalized_name"],
+                name="idx_geo_place_search",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='geoplace',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('lat__isnull', True), ('lon__isnull', True)), models.Q(('lat__isnull', False), ('lon__isnull', False)), _connector='OR'), name='chk_geo_place_latlon'),
+            model_name="geoplace",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(("lat__isnull", True), ("lon__isnull", True)),
+                    models.Q(("lat__isnull", False), ("lon__isnull", False)),
+                    _connector="OR",
+                ),
+                name="chk_geo_place_latlon",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='geoplace',
-            constraint=models.UniqueConstraint(condition=models.Q(('kind__isnull', False), ('normalized_name__isnull', False)), fields=('country', 'parent', 'kind', 'normalized_name'), name='unq_geo_place_country_parent_kind_normname'),
+            model_name="geoplace",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(
+                    ("kind__isnull", False), ("normalized_name__isnull", False)
+                ),
+                fields=("country", "parent", "kind", "normalized_name"),
+                name="unq_geo_place_country_parent_kind_normname",
+            ),
         ),
         migrations.AddIndex(
-            model_name='org',
-            index=models.Index(fields=['country'], name='idx_org_country'),
+            model_name="org",
+            index=models.Index(fields=["country"], name="idx_org_country"),
         ),
         migrations.AddIndex(
-            model_name='person',
-            index=models.Index(fields=['family_name', 'given_name'], name='idx_person_full_name'),
+            model_name="person",
+            index=models.Index(
+                fields=["family_name", "given_name"], name="idx_person_full_name"
+            ),
         ),
         migrations.AddIndex(
-            model_name='person',
-            index=models.Index(fields=['primary_nationality'], name='idx_person_primary_nat'),
+            model_name="person",
+            index=models.Index(
+                fields=["primary_nationality"], name="idx_person_primary_nat"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='person',
-            constraint=models.CheckConstraint(condition=models.Q(('death_date__isnull', True), ('birth_date__isnull', True), ('death_date__gte', models.F('birth_date')), _connector='OR'), name='chk_person_death_after_birth'),
+            model_name="person",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("death_date__isnull", True),
+                    ("birth_date__isnull", True),
+                    ("death_date__gte", models.F("birth_date")),
+                    _connector="OR",
+                ),
+                name="chk_person_death_after_birth",
+            ),
         ),
         migrations.AddIndex(
-            model_name='venue',
-            index=models.Index(fields=['country', 'geo_place'], name='idx_venue_country_geoplace'),
+            model_name="venue",
+            index=models.Index(
+                fields=["country", "geo_place"], name="idx_venue_country_geoplace"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='venue',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('lat__isnull', True), ('lon__isnull', True)), models.Q(('lat__isnull', False), ('lon__isnull', False)), _connector='OR'), name='chk_venue_latlon'),
+            model_name="venue",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    models.Q(("lat__isnull", True), ("lon__isnull", True)),
+                    models.Q(("lat__isnull", False), ("lon__isnull", False)),
+                    _connector="OR",
+                ),
+                name="chk_venue_latlon",
+            ),
         ),
     ]

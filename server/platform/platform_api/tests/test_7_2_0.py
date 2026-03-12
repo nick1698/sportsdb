@@ -115,7 +115,7 @@ class InboxFlowTests(TransactionTestCase):
     def test_inbox_contracts(self):
         sport = _mk_sport()
         user = _mk_user("inbox_tester1")
-        
+
         with subtest(self, "Inbox CREATE: auto event CREATED on commit"):
 
             req = EditRequestsInbox.objects.create(

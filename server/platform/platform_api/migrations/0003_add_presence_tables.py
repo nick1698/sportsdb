@@ -9,75 +9,187 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('platform_api', '0002_using_charfield_not_textfield'),
+        ("platform_api", "0002_using_charfield_not_textfield"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='geoplace',
-            name='parent',
-            field=models.ForeignKey(blank=True, db_column='parent_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='children', to='platform_api.geoplace', verbose_name='Broader area'),
+            model_name="geoplace",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="parent_id",
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="children",
+                to="platform_api.geoplace",
+                verbose_name="Broader area",
+            ),
         ),
         migrations.AlterField(
-            model_name='person',
-            name='sex',
-            field=models.SmallIntegerField(choices=[(1, 'F'), (2, 'M'), (3, 'other')], default=1),
+            model_name="person",
+            name="sex",
+            field=models.SmallIntegerField(
+                choices=[(1, "F"), (2, "M"), (3, "other")], default=1
+            ),
         ),
         migrations.AlterField(
-            model_name='sport',
-            name='name_en',
-            field=models.CharField(max_length=128, verbose_name='name (eng)'),
+            model_name="sport",
+            name="name_en",
+            field=models.CharField(max_length=128, verbose_name="name (eng)"),
         ),
         migrations.AlterField(
-            model_name='sport',
-            name='rules',
-            field=models.TextField(blank=True, help_text='NOTE: Preferably in English', null=True),
+            model_name="sport",
+            name="rules",
+            field=models.TextField(
+                blank=True, help_text="NOTE: Preferably in English", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='geo_place',
-            field=models.ForeignKey(blank=True, db_column='geo_place_id', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='venues', to='platform_api.geoplace', verbose_name='location'),
+            model_name="venue",
+            name="geo_place",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="geo_place_id",
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="venues",
+                to="platform_api.geoplace",
+                verbose_name="location",
+            ),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='lat',
-            field=models.FloatField(blank=True, null=True, verbose_name='Latitude'),
+            model_name="venue",
+            name="lat",
+            field=models.FloatField(blank=True, null=True, verbose_name="Latitude"),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='lon',
-            field=models.FloatField(blank=True, null=True, verbose_name='Longitude'),
+            model_name="venue",
+            name="lon",
+            field=models.FloatField(blank=True, null=True, verbose_name="Longitude"),
         ),
         migrations.CreateModel(
-            name='OrgPresence',
+            name="OrgPresence",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False, verbose_name='Created at')),
-                ('ts_last_update', models.DateTimeField(auto_now=True, verbose_name='Last updated at')),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('vertical_entity_id', models.UUIDField()),
-                ('org', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='presences', to='platform_api.org')),
-                ('sport', models.ForeignKey(db_column='sport_key', on_delete=django.db.models.deletion.PROTECT, related_name='org_presences', to='platform_api.sport')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now,
+                        editable=False,
+                        verbose_name="Created at",
+                    ),
+                ),
+                (
+                    "ts_last_update",
+                    models.DateTimeField(auto_now=True, verbose_name="Last updated at"),
+                ),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("vertical_entity_id", models.UUIDField()),
+                (
+                    "org",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="presences",
+                        to="platform_api.org",
+                    ),
+                ),
+                (
+                    "sport",
+                    models.ForeignKey(
+                        db_column="sport_key",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="org_presences",
+                        to="platform_api.sport",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'org_sport_presence',
-                'indexes': [models.Index(fields=['org', 'sport'], name='ix_os_presence__org_sport'), models.Index(fields=['sport', 'vertical_entity_id'], name='ix_os_presence__sport_vertical')],
-                'constraints': [models.UniqueConstraint(fields=('org', 'sport', 'vertical_entity_id'), name='uq_os_presence__org_sport_vertical')],
+                "db_table": "org_sport_presence",
+                "indexes": [
+                    models.Index(
+                        fields=["org", "sport"], name="ix_os_presence__org_sport"
+                    ),
+                    models.Index(
+                        fields=["sport", "vertical_entity_id"],
+                        name="ix_os_presence__sport_vertical",
+                    ),
+                ],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("org", "sport", "vertical_entity_id"),
+                        name="uq_os_presence__org_sport_vertical",
+                    )
+                ],
             },
         ),
         migrations.CreateModel(
-            name='PersonPresence',
+            name="PersonPresence",
             fields=[
-                ('ts_creation', models.DateTimeField(default=django.utils.timezone.now, editable=False, verbose_name='Created at')),
-                ('ts_last_update', models.DateTimeField(auto_now=True, verbose_name='Last updated at')),
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('vertical_entity_id', models.UUIDField()),
-                ('person', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='presences', to='platform_api.person')),
-                ('sport', models.ForeignKey(db_column='sport_key', on_delete=django.db.models.deletion.PROTECT, related_name='person_presences', to='platform_api.sport')),
+                (
+                    "ts_creation",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now,
+                        editable=False,
+                        verbose_name="Created at",
+                    ),
+                ),
+                (
+                    "ts_last_update",
+                    models.DateTimeField(auto_now=True, verbose_name="Last updated at"),
+                ),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("vertical_entity_id", models.UUIDField()),
+                (
+                    "person",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="presences",
+                        to="platform_api.person",
+                    ),
+                ),
+                (
+                    "sport",
+                    models.ForeignKey(
+                        db_column="sport_key",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="person_presences",
+                        to="platform_api.sport",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'person_sport_presence',
-                'indexes': [models.Index(fields=['person', 'sport'], name='ix_ps_presence__person_sport'), models.Index(fields=['sport', 'vertical_entity_id'], name='ix_ps_presence__sport_vertical')],
-                'constraints': [models.UniqueConstraint(fields=('person', 'sport', 'vertical_entity_id'), name='uq_ps_presence__person_sport_vertical')],
+                "db_table": "person_sport_presence",
+                "indexes": [
+                    models.Index(
+                        fields=["person", "sport"], name="ix_ps_presence__person_sport"
+                    ),
+                    models.Index(
+                        fields=["sport", "vertical_entity_id"],
+                        name="ix_ps_presence__sport_vertical",
+                    ),
+                ],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("person", "sport", "vertical_entity_id"),
+                        name="uq_ps_presence__person_sport_vertical",
+                    )
+                ],
             },
         ),
     ]

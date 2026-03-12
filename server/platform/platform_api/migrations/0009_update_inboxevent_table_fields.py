@@ -6,22 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('platform_api', '0008_major_review_to_inbox_table'),
+        ("platform_api", "0008_major_review_to_inbox_table"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='editrequestsinboxevent',
-            name='notes',
+            model_name="editrequestsinboxevent",
+            name="notes",
         ),
         migrations.AddField(
-            model_name='editrequestsinboxevent',
-            name='description',
-            field=models.TextField(blank=True, default=''),
+            model_name="editrequestsinboxevent",
+            name="description",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AlterField(
-            model_name='editrequestsinboxevent',
-            name='event_type',
-            field=models.CharField(choices=[('created', 'Created'), ('comment', 'Comment'), ('data_editing', 'Data editing'), ('rejected', 'Rejected'), ('duplicate', 'Duplicate'), ('approved', 'Approved'), ('applied', 'Applied')], max_length=32),
+            model_name="editrequestsinboxevent",
+            name="event_type",
+            field=models.CharField(
+                choices=[
+                    ("created", "Created"),
+                    ("comment", "Comment"),
+                    ("data_editing", "Data editing"),
+                    ("rejected", "Rejected"),
+                    ("duplicate", "Duplicate"),
+                    ("approved", "Approved"),
+                    ("applied", "Applied"),
+                ],
+                max_length=32,
+            ),
         ),
     ]

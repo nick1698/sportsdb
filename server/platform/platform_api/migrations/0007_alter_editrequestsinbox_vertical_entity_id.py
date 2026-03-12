@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('platform_api', '0006_added_constraints_to_inbox_table'),
+        ("platform_api", "0006_added_constraints_to_inbox_table"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='editrequestsinbox',
-            name='vertical_entity_id',
+            model_name="editrequestsinbox",
+            name="vertical_entity_id",
             field=models.UUIDField(),
         ),
     ]

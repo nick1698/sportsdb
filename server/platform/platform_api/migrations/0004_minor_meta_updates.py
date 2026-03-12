@@ -6,16 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('platform_api', '0003_add_presence_tables'),
+        ("platform_api", "0003_add_presence_tables"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='orgpresence',
-            options={'verbose_name_plural': 'Org-sport mappings'},
+            name="orgpresence",
+            options={"verbose_name_plural": "Org-sport mappings"},
         ),
         migrations.AlterModelOptions(
-            name='personpresence',
-            options={'verbose_name_plural': 'Person-sport mappings'},
+            name="personpresence",
+            options={"verbose_name_plural": "Person-sport mappings"},
         ),
     ]
