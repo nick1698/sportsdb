@@ -149,4 +149,11 @@ def paginate(qs, limit: int, offset: int) -> Tuple[list, int]:
     return items, total
 
 
+class ResponseEnvelope(Schema, Generic[T]):
+    data: Optional[T] = None
+    message: Optional[str] = None
+    error: Optional[dict] = None  # Opzionale: per errori strutturati
+    success: bool = True
+
+
 # endregion
