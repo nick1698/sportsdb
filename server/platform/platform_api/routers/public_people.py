@@ -6,13 +6,13 @@ from django.shortcuts import get_object_or_404
 
 from ninja import Field, Query, Router, Schema
 
-from shared.utils.routing import search_query_helper as search
-from shared.api_contract.ninja import (
+from shared.api_contract.schemas import (
     ListEnvelope,
     ListQueryParams,
     apply_sort,
     paginate,
 )
+from shared.utils.routing import search_query_helper as search
 
 from platform_api.models.entities import Org, Person
 from platform_api.models.presence import OrgPresence, PersonPresence

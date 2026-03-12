@@ -4,7 +4,7 @@ from uuid import UUID
 from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Schema
 
-from shared.api_contract.ninja import (
+from shared.api_contract.schemas import (
     ListEnvelope,
     ListQueryParams,
     apply_sort,

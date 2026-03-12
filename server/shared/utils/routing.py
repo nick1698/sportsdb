@@ -1,6 +1,6 @@
 from urllib.parse import urlencode
 
-from shared.api_contract.ninja import ListEnvelope
+from shared.api_contract.schemas import ListEnvelope
 
 
 class TableUrlConfig:
