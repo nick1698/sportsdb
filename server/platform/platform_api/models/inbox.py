@@ -53,7 +53,6 @@ class EditRequestsInbox(GrowingTable):
     payload = models.JSONField(help_text="Content of the request")
 
     # audit fields
-    changelog = models.TextField(blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -85,6 +84,8 @@ class EditRequestsInbox(GrowingTable):
     ts_finalised = models.DateTimeField(
         null=True, blank=True, verbose_name="Request applied at"
     )
+
+    notes = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "edit_requests_inbox"
