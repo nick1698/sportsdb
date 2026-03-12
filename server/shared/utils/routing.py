@@ -37,7 +37,7 @@ class BaseRoute:
         return "/" + "/".join(cleaned)
 
     @staticmethod
-    def _with_query(path: str, params: dict) -> str:
+    def _with_params(path: str, params: dict) -> str:
         if not params:
             return path
         return f"{path}?{urlencode(params)}"
@@ -47,45 +47,81 @@ class BaseRoute:
     # region PROPERTIES
 
     @property
-    def short(self):
+    def _router_prefix(self):
+        """e.g. "/api/core" """
+        return self._build_path(self._router_prefix)
+
+    @property
+    def list_short_url(self):
+        """e.g. "/countries" """
         return self._build_path(self.config.table_ep)
 
     @property
-    def short_id(self):
+    def retrieve_short_url(self):
+        """e.g. "/countries/{iso2}" """
         return self._build_path(self.config.table_ep, f"{{{self.config.pk}}}")
 
     @property
-    def search_short(self):
+    def search_short_url(self):
+        """e.g. "/search/countries" """
         return self._build_path("search", self.config.table_ep)
 
     @property
-    def base(self):
-        return self._build_path("api", self.config.router, self.config.table_ep)
+    def list_url(self):
+        """e.g. "/api/core/countries" """
+        return self._build_path(self._router_prefix, self.config.table_ep)
 
     @property
-    def base_id(self):
+    def retrieve_demo_url(self):
+        """e.g. "/api/core/countries/{iso2}" """
         return self._build_path(
-            "api", self.config.router, self.config.table_ep, f"{{{self.config.pk}}}"
+            self._router_prefix, self.config.table_ep, f"{{{self.config.pk}}}"
         )
 
     @property
-    def search(self):
-        return self._build_path(
-            "api", self.config.router, "search", self.config.table_ep
-        )
+    def search_url(self):
+        """e.g. "/api/core/search/countries" """
+        return self._build_path(self._router_prefix, "search", self.config.table_ep)
 
     # endregion
 
-    # region QUERY METHODS
+    # region GET METHODS
 
-    def list(self, **params):
-        return self._with_query(self.base, params)
+    def compose_list_url(self, **params):
+        """e.g. "/api/core/countries?param1=...&param2=..." """
+        return self._with_params(self.list_url, params)
 
-    def retrieve(self, pk: str, **params):
-        path = self._build_path(
-            "api", self.config.router, self.config.table_ep, str(pk)
-        )
-        return self._with_query(path, params)
+    def compose_retrieve_url(self, pk: str, **params):
+        """e.g. "/api/core/countries/[pk]?param1=...&param2=..." """
+        path = self._build_path(self._router_prefix, self.config.table_ep, str(pk))
+        return self._with_params(path, params)
+
+    # endregion
+
+    # region POST METHODS
+
+    def compose_post_url(
+        self, action: str = "create", pk: str | None = None, short=False
+    ):
+        match pk, short:
+            case None, True:
+                """e.g. "/countries/[action]/" """
+                return self._build_path(self.config.table_ep, action)
+            case None, False:
+                """e.g. "/api/core/countries/[action]/" """
+                return self._build_path(
+                    self._router_prefix, self.config.table_ep, action
+                )
+            case _, True:
+                """e.g. "/countries/[action]/{iso2}/" """
+                return self._build_path(
+                    self.config.table_ep, action, f"{{{self.config.pk}}}"
+                )
+            case pk, False:
+                """e.g. "/api/core/countries/[action]/[pk]" """
+                return self._build_path(
+                    self._router_prefix, self.config.table_ep, action, pk
+                )
 
     # endregion
 

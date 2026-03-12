@@ -144,8 +144,8 @@ class PublicCoreReadOnlyAPITests(TestCase):
     @print_exit("Public core API contracts")
     def test_public_core_api_contract(self):
         country_ep = PlatformRoute(Country)
-        with subtest(self, f"GET {country_ep.base} -> envelope + pagination"):
-            r = self.client.get(country_ep.list(limit=1, offset=0))
+        with subtest(self, f"GET {country_ep.list_url} -> envelope + pagination"):
+            r = self.client.get(country_ep.compose_list_url(limit=1, offset=0))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -155,21 +155,21 @@ class PublicCoreReadOnlyAPITests(TestCase):
             self.assertEqual(data["total"], 2)
             self.assertEqual(len(data["items"]), 1)
 
-        with subtest(self, f"GET {country_ep.base_id} -> 200 + payload"):
-            r = self.client.get(country_ep.retrieve("IT"))
+        with subtest(self, f"GET {country_ep.retrieve_demo_url} -> 200 + payload"):
+            r = self.client.get(country_ep.compose_retrieve_url("IT"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["iso2"], "IT")
             self.assertIn("name_en", data)
 
-        with subtest(self, f"GET {country_ep.base_id} -> 404 if missing"):
-            r = self.client.get(country_ep.retrieve("ZZ"))
+        with subtest(self, f"GET {country_ep.retrieve_demo_url} -> 404 if missing"):
+            r = self.client.get(country_ep.compose_retrieve_url("ZZ"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
         sport_ep = PlatformRoute(Sport)
-        with subtest(self, f"GET {sport_ep.base} -> sort by key"):
-            r = self.client.get(sport_ep.list(sort="key"))
+        with subtest(self, f"GET {sport_ep.list_url} -> sort by key"):
+            r = self.client.get(sport_ep.compose_list_url(sort="key"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -179,8 +179,8 @@ class PublicCoreReadOnlyAPITests(TestCase):
             keys = [x["key"] for x in data["items"]]
             self.assertEqual(keys, sorted(keys))
 
-        with subtest(self, f"GET {sport_ep.base_id} -> 200 + payload"):
-            r = self.client.get(sport_ep.retrieve("volley"))
+        with subtest(self, f"GET {sport_ep.retrieve_demo_url} -> 200 + payload"):
+            r = self.client.get(sport_ep.compose_retrieve_url("volley"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -188,7 +188,7 @@ class PublicCoreReadOnlyAPITests(TestCase):
             self.assertIn("name_en", data)
 
         with subtest(self, "GET /api/core/sports/{key} -> 404 if missing"):
-            r = self.client.get(sport_ep.retrieve("not-a-sport"))
+            r = self.client.get(sport_ep.compose_retrieve_url("not-a-sport"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
 
@@ -212,8 +212,8 @@ class GeoPlacesReadOnlyAPITests(TestCase):
     @print_exit("GeoPlace API contracts")
     def test_geo_places_api_contract(self):
         geoplace_ep = PlatformRoute(GeoPlace)
-        with subtest(self, f"GET {geoplace_ep.base} -> envelope + pagination"):
-            r = self.client.get(geoplace_ep.list(limit=2, offset=0))
+        with subtest(self, f"GET {geoplace_ep.list_url} -> envelope + pagination"):
+            r = self.client.get(geoplace_ep.compose_list_url(limit=2, offset=0))
             self.assertEqual(HTTPStatus(r.status_code), 200)
 
             data = r.json()
@@ -223,17 +223,17 @@ class GeoPlacesReadOnlyAPITests(TestCase):
             self.assertEqual(data["total"], 3)
             self.assertEqual(len(data["items"]), 2)
 
-        with subtest(self, f"GET {geoplace_ep.base} -> filter by country_id"):
-            r = self.client.get(geoplace_ep.list(country_id="IT"))
+        with subtest(self, f"GET {geoplace_ep.list_url} -> filter by country_id"):
+            r = self.client.get(geoplace_ep.compose_list_url(country_id="IT"))
             self.assertEqual(HTTPStatus(r.status_code), 200)
             data = r.json()
 
             self.assertEqual(data["total"], 2)
             self.assertTrue(all(item["country_id"] == "IT" for item in data["items"]))
 
-        with subtest(self, f"GET {geoplace_ep.base_id} -> 200"):
+        with subtest(self, f"GET {geoplace_ep.retrieve_demo_url} -> 200"):
             gp = GeoPlace.objects.first()
-            r = self.client.get(geoplace_ep.retrieve(gp.id))
+            r = self.client.get(geoplace_ep.compose_retrieve_url(gp.id))
             self.assertEqual(HTTPStatus(r.status_code), 200)
             data = r.json()
             self.assertEqual(data["id"], str(gp.id))
@@ -241,8 +241,8 @@ class GeoPlacesReadOnlyAPITests(TestCase):
             self.assertIn("kind", data)
             self.assertIn("country_id", data)
 
-        with subtest(self, f"GET {geoplace_ep.base_id} -> 404 if missing"):
-            r = self.client.get(geoplace_ep.retrieve(uuid.uuid4()))
+        with subtest(self, f"GET {geoplace_ep.retrieve_demo_url} -> 404 if missing"):
+            r = self.client.get(geoplace_ep.compose_retrieve_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), 404)
 
 
@@ -309,8 +309,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
     def test_venue_api_contract(self):
         venue_ep = PlatformRoute(Venue)
 
-        with subtest(self, f"GET {venue_ep.base} -> envelope + pagination"):
-            r = self.client.get(venue_ep.list(limit=1, offset=0))
+        with subtest(self, f"GET {venue_ep.list_url} -> envelope + pagination"):
+            r = self.client.get(venue_ep.compose_list_url(limit=1, offset=0))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -319,8 +319,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["total"], 2)
             self.assertEqual(len(data["items"]), 1)
 
-        with subtest(self, f"GET {venue_ep.base} -> filter by country_id"):
-            r = self.client.get(venue_ep.list(country_id="IT"))
+        with subtest(self, f"GET {venue_ep.list_url} -> filter by country_id"):
+            r = self.client.get(venue_ep.compose_list_url(country_id="IT"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -328,16 +328,16 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["items"][0]["id"], str(self.venue_it.id))
             self.assertEqual(data["items"][0]["country_id"], "IT")
 
-        with subtest(self, f"GET {venue_ep.base} -> filter by geo_place_id"):
-            r = self.client.get(venue_ep.list(geo_place_id=self.milano.id))
+        with subtest(self, f"GET {venue_ep.list_url} -> filter by geo_place_id"):
+            r = self.client.get(venue_ep.compose_list_url(geo_place_id=self.milano.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
             self.assertEqual(data["total"], 1)
             self.assertEqual(data["items"][0]["id"], str(self.venue_it.id))
 
-        with subtest(self, f"GET {venue_ep.base_id} -> 200 + payload"):
-            r = self.client.get(venue_ep.retrieve(self.venue_it.id))
+        with subtest(self, f"GET {venue_ep.retrieve_demo_url} -> 200 + payload"):
+            r = self.client.get(venue_ep.compose_retrieve_url(self.venue_it.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -345,16 +345,16 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["name"], "Arena Milano")
             self.assertEqual(data["country_id"], "IT")
 
-        with subtest(self, f"GET {venue_ep.base_id} -> 404 if missing"):
-            r = self.client.get(venue_ep.retrieve(uuid.uuid4()))
+        with subtest(self, f"GET {venue_ep.retrieve_demo_url} -> 404 if missing"):
+            r = self.client.get(venue_ep.compose_retrieve_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Org API contracts")
     def test_org_api_contract(self):
         org_ep = PlatformRoute(Org)
 
-        with subtest(self, f"GET {org_ep.base} -> envelope + pagination"):
-            r = self.client.get(org_ep.list(limit=1, offset=0))
+        with subtest(self, f"GET {org_ep.list_url} -> envelope + pagination"):
+            r = self.client.get(org_ep.compose_list_url(limit=1, offset=0))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -363,8 +363,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["total"], 2)
             self.assertEqual(len(data["items"]), 1)
 
-        with subtest(self, f"GET {org_ep.base} -> filter by country_id"):
-            r = self.client.get(org_ep.list(country_id="IT"))
+        with subtest(self, f"GET {org_ep.list_url} -> filter by country_id"):
+            r = self.client.get(org_ep.compose_list_url(country_id="IT"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -372,8 +372,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["items"][0]["id"], str(self.org_it.id))
             self.assertEqual(data["items"][0]["country_id"], "IT")
 
-        with subtest(self, f"GET {org_ep.base} -> filter by type"):
-            r = self.client.get(org_ep.list(type=2))
+        with subtest(self, f"GET {org_ep.list_url} -> filter by type"):
+            r = self.client.get(org_ep.compose_list_url(type=2))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -381,8 +381,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["items"][0]["id"], str(self.org_nl.id))
             self.assertEqual(data["items"][0]["type"], 2)
 
-        with subtest(self, f"GET {org_ep.base_id} -> 200 + payload"):
-            r = self.client.get(org_ep.retrieve(self.org_it.id))
+        with subtest(self, f"GET {org_ep.retrieve_demo_url} -> 200 + payload"):
+            r = self.client.get(org_ep.compose_retrieve_url(self.org_it.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -390,16 +390,16 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["name"], "Volley Milano")
             self.assertEqual(data["country_id"], "IT")
 
-        with subtest(self, f"GET {org_ep.base_id} -> 404 if missing"):
-            r = self.client.get(org_ep.retrieve(uuid.uuid4()))
+        with subtest(self, f"GET {org_ep.retrieve_demo_url} -> 404 if missing"):
+            r = self.client.get(org_ep.compose_retrieve_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Person API contracts")
     def test_person_api_contract(self):
         person_ep = PlatformRoute(Person)
 
-        with subtest(self, f"GET {person_ep.base} -> envelope + pagination"):
-            r = self.client.get(person_ep.list(limit=2, offset=0))
+        with subtest(self, f"GET {person_ep.list_url} -> envelope + pagination"):
+            r = self.client.get(person_ep.compose_list_url(limit=2, offset=0))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -408,8 +408,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["total"], 3)
             self.assertEqual(len(data["items"]), 2)
 
-        with subtest(self, f"GET {person_ep.base} -> filter by primary_nationality_id"):
-            r = self.client.get(person_ep.list(primary_nationality_id="IT"))
+        with subtest(self, f"GET {person_ep.list_url} -> filter by primary_nationality_id"):
+            r = self.client.get(person_ep.compose_list_url(primary_nationality_id="IT"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -418,8 +418,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
                 all(item["primary_nationality_id"] == "IT" for item in data["items"])
             )
 
-        with subtest(self, f"GET {person_ep.base} -> filter by sex"):
-            r = self.client.get(person_ep.list(sex=Sex.MALE))
+        with subtest(self, f"GET {person_ep.list_url} -> filter by sex"):
+            r = self.client.get(person_ep.compose_list_url(sex=Sex.MALE))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -427,8 +427,8 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["items"][0]["id"], str(self.person_m.id))
             self.assertEqual(data["items"][0]["sex"], Sex.MALE)
 
-        with subtest(self, f"GET {person_ep.base_id} -> 200 + payload"):
-            r = self.client.get(person_ep.retrieve(self.person_it.id))
+        with subtest(self, f"GET {person_ep.retrieve_demo_url} -> 200 + payload"):
+            r = self.client.get(person_ep.compose_retrieve_url(self.person_it.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -437,15 +437,15 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
             self.assertEqual(data["family_name"], "Rossi")
             self.assertEqual(data["primary_nationality_id"], "IT")
 
-        with subtest(self, f"GET {person_ep.base_id} -> 404 if missing"):
-            r = self.client.get(person_ep.retrieve(uuid.uuid4()))
+        with subtest(self, f"GET {person_ep.retrieve_demo_url} -> 404 if missing"):
+            r = self.client.get(person_ep.compose_retrieve_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Venue list invalid sort -> 400")
     def test_venue_list_invalid_sort_returns_400(self):
         venue_ep = PlatformRoute(Venue)
 
-        r = self.client.get(venue_ep.list(sort="not_a_real_field"))
+        r = self.client.get(venue_ep.compose_list_url(sort="not_a_real_field"))
         self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.BAD_REQUEST)
 
         data = r.json()
@@ -456,7 +456,7 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
     def test_person_list_invalid_sex_returns_422(self):
         person_ep = PlatformRoute(Person)
 
-        r = self.client.get(person_ep.list(sex=99))
+        r = self.client.get(person_ep.compose_list_url(sex=99))
         self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
         data = r.json()
@@ -540,9 +540,9 @@ class CoreSearchReadOnlyAPITests(TestCase):
     @print_exit("Org search API contracts")
     def test_org_search_api_contract(self):
         with subtest(
-            self, f"GET {self.org_ep.search}?q=... -> envelope + deterministic ranking"
+            self, f"GET {self.org_ep.search_url}?q=... -> envelope + deterministic ranking"
         ):
-            r = self.client.get(self.org_ep.search, {"q": "milan"})
+            r = self.client.get(self.org_ep.search_url, {"q": "milan"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -560,8 +560,8 @@ class CoreSearchReadOnlyAPITests(TestCase):
                 ],
             )
 
-        with subtest(self, f"GET {self.org_ep.search}?q=... -> payload shape"):
-            r = self.client.get(self.org_ep.search, {"q": "milan"})
+        with subtest(self, f"GET {self.org_ep.search_url}?q=... -> payload shape"):
+            r = self.client.get(self.org_ep.search_url, {"q": "milan"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -573,9 +573,9 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self.assertIn("country_id", first)
 
         with subtest(
-            self, f"GET {self.org_ep.search}?q=... -> empty result if no match"
+            self, f"GET {self.org_ep.search_url}?q=... -> empty result if no match"
         ):
-            r = self.client.get(self.org_ep.search, {"q": "zzzzzz"})
+            r = self.client.get(self.org_ep.search_url, {"q": "zzzzzz"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -587,9 +587,9 @@ class CoreSearchReadOnlyAPITests(TestCase):
     def test_person_search_api_contract(self):
         with subtest(
             self,
-            f"GET {self.person_ep.search}?q=... -> envelope + deterministic ranking",
+            f"GET {self.person_ep.search_url}?q=... -> envelope + deterministic ranking",
         ):
-            r = self.client.get(self.person_ep.search, {"q": "mila"})
+            r = self.client.get(self.person_ep.search_url, {"q": "mila"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -607,8 +607,8 @@ class CoreSearchReadOnlyAPITests(TestCase):
                 ],
             )
 
-        with subtest(self, f"GET {self.person_ep.search}?q=... -> payload shape"):
-            r = self.client.get(self.person_ep.search, {"q": "mila"})
+        with subtest(self, f"GET {self.person_ep.search_url}?q=... -> payload shape"):
+            r = self.client.get(self.person_ep.search_url, {"q": "mila"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -623,9 +623,9 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self.assertIn("primary_nationality_id", first)
 
         with subtest(
-            self, f"GET {self.person_ep.search}?q=... -> empty result if no match"
+            self, f"GET {self.person_ep.search_url}?q=... -> empty result if no match"
         ):
-            r = self.client.get(self.person_ep.search, {"q": "zzzzzz"})
+            r = self.client.get(self.person_ep.search_url, {"q": "zzzzzz"})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -635,16 +635,16 @@ class CoreSearchReadOnlyAPITests(TestCase):
 
     @print_exit("Search invalid query -> 422")
     def test_search_empty_query_returns_422(self):
-        with subtest(self, f"GET {self.org_ep.search}?q='' -> 422"):
-            r = self.client.get(self.org_ep.search, {"q": ""})
+        with subtest(self, f"GET {self.org_ep.search_url}?q='' -> 422"):
+            r = self.client.get(self.org_ep.search_url, {"q": ""})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
             data = r.json()
             self.assertIn("error", data)
             self.assertIn("code", data["error"])
 
-        with subtest(self, f"GET {self.person_ep.search}?q='' -> 422"):
-            r = self.client.get(self.person_ep.search, {"q": ""})
+        with subtest(self, f"GET {self.person_ep.search_url}?q='' -> 422"):
+            r = self.client.get(self.person_ep.search_url, {"q": ""})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
             data = r.json()
@@ -712,8 +712,8 @@ class CorePresencesReadOnlyAPITests(TestCase):
 
     @print_exit("Org presences API contracts")
     def test_org_presences_api_contract(self):
-        with subtest(self, f"GET {self.org_ep.presence_base} -> envelope + payload"):
-            r = self.client.get(self.org_ep.presence(self.org.id))
+        with subtest(self, f"GET {self.org_ep.presence_list_url} -> envelope + payload"):
+            r = self.client.get(self.org_ep.compose_presence_url(self.org.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -737,8 +737,8 @@ class CorePresencesReadOnlyAPITests(TestCase):
                 ],
             )
 
-        with subtest(self, f"GET {self.org_ep.presence_base}?sport_key=... -> filter"):
-            r = self.client.get(self.org_ep.presence(self.org.id, sport_key="volley"))
+        with subtest(self, f"GET {self.org_ep.presence_list_url}?sport_key=... -> filter"):
+            r = self.client.get(self.org_ep.compose_presence_url(self.org.id, sport_key="volley"))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -752,14 +752,14 @@ class CorePresencesReadOnlyAPITests(TestCase):
                 str(self.org_volley_presence_id),
             )
 
-        with subtest(self, f"GET {self.org_ep.presence_base} -> 404 if org missing"):
-            r = self.client.get(self.org_ep.presence(uuid.uuid4()))
+        with subtest(self, f"GET {self.org_ep.presence_list_url} -> 404 if org missing"):
+            r = self.client.get(self.org_ep.compose_presence_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
     @print_exit("Person presences API contracts")
     def test_person_presences_api_contract(self):
-        with subtest(self, f"GET {self.person_ep.presence_base} -> envelope + payload"):
-            r = self.client.get(self.person_ep.presence(self.person.id))
+        with subtest(self, f"GET {self.person_ep.presence_list_url} -> envelope + payload"):
+            r = self.client.get(self.person_ep.compose_presence_url(self.person.id))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
             data = r.json()
@@ -784,10 +784,10 @@ class CorePresencesReadOnlyAPITests(TestCase):
             )
 
         with subtest(
-            self, f"GET {self.person_ep.presence_base}?sport_key=... -> filter"
+            self, f"GET {self.person_ep.presence_list_url}?sport_key=... -> filter"
         ):
             r = self.client.get(
-                self.person_ep.presence(self.person.id, sport_key="football")
+                self.person_ep.compose_presence_url(self.person.id, sport_key="football")
             )
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.OK)
 
@@ -803,9 +803,9 @@ class CorePresencesReadOnlyAPITests(TestCase):
             )
 
         with subtest(
-            self, f"GET {self.person_ep.presence_base} -> 404 if person missing"
+            self, f"GET {self.person_ep.presence_list_url} -> 404 if person missing"
         ):
-            r = self.client.get(self.person_ep.presence(uuid.uuid4()))
+            r = self.client.get(self.person_ep.compose_presence_url(uuid.uuid4()))
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.NOT_FOUND)
 
 

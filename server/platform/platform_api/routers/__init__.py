@@ -15,19 +15,19 @@ class PlatformRoute(BaseRoute):
     }
 
     @property
-    def presence_short(self):
+    def presence_retrieve_url(self):
+        """e.g. "/countries/{iso2}/presences"""
         return self._build_path(
             self.config.table_ep, f"{{{self.config.pk}}}", "presences"
         )
 
     @property
-    def presence_base(self):
-        return self._build_path(
-            "api", self.config.router, self.config.table_ep, f"{{{self.config.pk}}}", "presences"
-        )
+    def presence_list_url(self):
+        """e.g. "/api/core/countries/{iso2}/presences"""
+        return self._build_path(self._router_prefix, self.presence_retrieve_url)
 
-    def presence(self, pk: str, **params):
+    def compose_presence_url(self, pk: str, **params):
         path = self._build_path(
-            "api", self.config.router, self.config.table_ep, str(pk), "presences"
+            self._router_prefix, self.config.table_ep, str(pk), "presences"
         )
-        return self._with_query(path, params)
+        return self._with_params(path, params)

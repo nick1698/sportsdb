@@ -49,7 +49,7 @@ class VenueListParams(ListQueryParams):
 geoplace_ep = PlatformRoute(GeoPlace)
 
 
-@router.get(geoplace_ep.short, response=ListEnvelope[GeoPlaceOut])
+@router.get(geoplace_ep.list_short_url, response=ListEnvelope[GeoPlaceOut])
 def list_locations(
     request, q: ListQueryParams = Query(...), country_id: Optional[str] = None
 ):
@@ -73,7 +73,7 @@ def list_locations(
     }
 
 
-@router.get(geoplace_ep.short_id, response=GeoPlaceOut)
+@router.get(geoplace_ep.retrieve_short_url, response=GeoPlaceOut)
 def get_location(request, id: UUID):
     return get_object_or_404(GeoPlace, id=id)
 
@@ -81,7 +81,7 @@ def get_location(request, id: UUID):
 venue_ep = PlatformRoute(Venue)
 
 
-@router.get(venue_ep.short, response=ListEnvelope[VenueOut])
+@router.get(venue_ep.list_short_url, response=ListEnvelope[VenueOut])
 def list_venues(request, params: VenueListParams = Query(...)):
     qs = Venue.objects.all()
 
@@ -108,7 +108,7 @@ def list_venues(request, params: VenueListParams = Query(...)):
     }
 
 
-@router.get(venue_ep.short_id, response=VenueOut)
+@router.get(venue_ep.retrieve_short_url, response=VenueOut)
 def get_venue(request, id: UUID):
     return get_object_or_404(Venue, id=id)
 

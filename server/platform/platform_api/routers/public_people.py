@@ -84,7 +84,7 @@ class PresenceOut(Schema):
 org_ep = PlatformRoute(Org)
 
 
-@router.get(org_ep.short, response=ListEnvelope[OrgOut])
+@router.get(org_ep.list_short_url, response=ListEnvelope[OrgOut])
 def list_orgs(request, params: OrgListParams = Query(...)):
     qs = Org.objects.all()
 
@@ -111,12 +111,12 @@ def list_orgs(request, params: OrgListParams = Query(...)):
     }
 
 
-@router.get(org_ep.short_id, response=OrgOut)
+@router.get(org_ep.retrieve_short_url, response=OrgOut)
 def get_org(request, id: UUID):
     return get_object_or_404(Org, pk=id)
 
 
-@router.get(org_ep.search_short, response=ListEnvelope[OrgSearchOut])
+@router.get(org_ep.search_short_url, response=ListEnvelope[OrgSearchOut])
 def search_orgs(request, q: str = Query(..., min_length=1)):
     def query(param):
         return (
@@ -139,7 +139,7 @@ def search_orgs(request, q: str = Query(..., min_length=1)):
     return search(q, query)
 
 
-@router.get(org_ep.presence_short, response=ListEnvelope[PresenceOut])
+@router.get(org_ep.presence_retrieve_url, response=ListEnvelope[PresenceOut])
 def list_org_presences(request, id: UUID, sport_key: str | None = None):
     get_object_or_404(Org, id=id)
 
@@ -173,7 +173,7 @@ def list_org_presences(request, id: UUID, sport_key: str | None = None):
 person_ep = PlatformRoute(Person)
 
 
-@router.get(person_ep.short, response=ListEnvelope[PersonOut])
+@router.get(person_ep.list_short_url, response=ListEnvelope[PersonOut])
 def list_persons(request, params: PersonListParams = Query(...)):
     qs = Person.objects.all()
 
@@ -200,12 +200,12 @@ def list_persons(request, params: PersonListParams = Query(...)):
     }
 
 
-@router.get(person_ep.short_id, response=PersonOut)
+@router.get(person_ep.retrieve_short_url, response=PersonOut)
 def get_person(request, id: UUID):
     return get_object_or_404(Person, pk=id)
 
 
-@router.get(person_ep.search_short, response=ListEnvelope[PersonSearchOut])
+@router.get(person_ep.search_short_url, response=ListEnvelope[PersonSearchOut])
 def search_persons(request, q: str = Query(..., min_length=1)):
     def query(param):
         return (
@@ -232,7 +232,7 @@ def search_persons(request, q: str = Query(..., min_length=1)):
     return search(q, query)
 
 
-@router.get(person_ep.presence_short, response=ListEnvelope[PresenceOut])
+@router.get(person_ep.presence_retrieve_url, response=ListEnvelope[PresenceOut])
 def list_person_presences(request, id: UUID, sport_key: str | None = None):
     get_object_or_404(Person, id=id)
 

@@ -36,7 +36,7 @@ class SportOut(Schema):
 country_ep = PlatformRoute(Country)
 
 
-@router.get(country_ep.short, response=ListEnvelope[CountryOut])
+@router.get(country_ep.list_short_url, response=ListEnvelope[CountryOut])
 def list_countries(request, q: ListQueryParams = Query(...)):
     qs = Country.objects.all()
     qs, sort_used = apply_sort(
@@ -52,7 +52,7 @@ def list_countries(request, q: ListQueryParams = Query(...)):
     }
 
 
-@router.get(country_ep.short_id, response=CountryOut)
+@router.get(country_ep.retrieve_short_url, response=CountryOut)
 def get_country(request, iso2: str):
     return get_object_or_404(Country, iso2=iso2.upper())
 
@@ -60,7 +60,7 @@ def get_country(request, iso2: str):
 sport_ep = PlatformRoute(Sport)
 
 
-@router.get(sport_ep.short, response=ListEnvelope[SportOut])
+@router.get(sport_ep.list_short_url, response=ListEnvelope[SportOut])
 def list_sports(request, q: ListQueryParams = Query(...)):
     qs = Sport.objects.all()
     qs, sort_used = apply_sort(
@@ -76,7 +76,7 @@ def list_sports(request, q: ListQueryParams = Query(...)):
     }
 
 
-@router.get(sport_ep.short_id, response=SportOut)
+@router.get(sport_ep.retrieve_short_url, response=SportOut)
 def get_sport(request, key: str):
     return get_object_or_404(Sport, key=key)
 
