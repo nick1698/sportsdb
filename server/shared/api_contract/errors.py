@@ -1,7 +1,11 @@
 from http import HTTPStatus
 from typing import Any, Callable, Optional, List, Dict, Type, TypeVar, Union
 
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError as DjangoValidationError
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    PermissionDenied,
+    ValidationError as DjangoValidationError,
+)
 from django.http import HttpRequest, JsonResponse, Http404
 
 from ninja import Schema, NinjaAPI
@@ -59,6 +63,8 @@ class ApiErrorException(Exception):
         super().__init__(error.message)
 
 
+ValidationExc = Union[NinjaValidationError, DjangoValidationError]
+
 # endregion
 
 # region ERROR HANDLERS
@@ -77,18 +83,42 @@ def __handler_resp__(request: HttpRequest, err: ApiError) -> JsonResponse:
 
 
 def handle_validation_error(
-    request: HttpRequest, exc: Union[ValidationError, Type[ValidationError]]
+    request: HttpRequest,
+    exc: ValidationExc,
 ) -> JsonResponse:
-    details = []
-    for e in exc.errors:
-        loc = e.get("loc", [])
-        details.append(
-            {
-                "field": ".".join(str(x) for x in loc if x is not None),
-                "issue": e.get("msg", "invalid"),
-                "type": e.get("type"),
-            }
-        )
+    details: list[dict[str, object]] = []
+
+    if isinstance(exc, NinjaValidationError):
+        for e in exc.errors:
+            loc = e.get("loc", [])
+            details.append(
+                {
+                    "field": ".".join(str(x) for x in loc if x is not None),
+                    "issue": e.get("msg", "invalid"),
+                    "type": e.get("type"),
+                }
+            )
+
+    elif isinstance(exc, DjangoValidationError):
+        if hasattr(exc, "message_dict"):
+            for field, messages in exc.message_dict.items():
+                for msg in messages:
+                    details.append(
+                        {
+                            "field": field,
+                            "issue": msg,
+                            "type": "invalid",
+                        }
+                    )
+        else:
+            for msg in exc.messages:
+                details.append(
+                    {
+                        "field": "",
+                        "issue": msg,
+                        "type": "invalid",
+                    }
+                )
 
     err = ApiError(
         status=HTTPStatus.UNPROCESSABLE_ENTITY,
