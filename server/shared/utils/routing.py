@@ -49,7 +49,7 @@ class BaseRoute:
     @property
     def _router_prefix(self):
         """e.g. "/api/core" """
-        return self._build_path(self._router_prefix)
+        return self._build_path("api", self.config.router)
 
     @property
     def list_short_url(self):
