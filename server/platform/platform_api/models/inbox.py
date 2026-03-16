@@ -230,22 +230,7 @@ class EditRequestsInbox(GrowingTable):
             self.ts_finalised = None
 
         self.full_clean()
-
-        is_new = self._state.adding
         super().save(*args, **kwargs)
-
-        def create_created_event():
-            t_str = self.ts_creation.isoformat(sep=" ", timespec="seconds")
-            EditRequestsInboxEvent.objects.create(
-                ts_creation=self.ts_creation,
-                request=self,
-                event_type=EventType.CREATED,
-                actor=self.created_by,
-                description=f"{t_str}: Edit request created by {self.created_by}"
-            )
-
-        if is_new:
-            transaction.on_commit(create_created_event)
 
 
 class EventType(models.TextChoices):

@@ -30,7 +30,7 @@ class InboxRequestIn(Schema):
     action: Optional[str]
     sport: str  # vertical slug
     vertical_entity_id: UUID
-    target_entity_id: UUID
+    target_entity_id: Optional[UUID] = None  # only optional for CREATE event
     payload: dict  # additional info
     notes: Optional[str]
 
@@ -78,10 +78,11 @@ def list_requests(request, params: ListQueryParams):
     response=ResponseEnvelope[InboxRequestsOut],
 )
 def create_request(request, payload: InboxRequestIn):
-    created_request = InboxService.create_request(payload.dict(), request.user)
-    return {"data": created_request, "message": "Request created successfully"}
+    req = InboxService.create_request(payload.dict(), request.user)
+    return {"data": req, "message": "Request created successfully"}
 
 
+# REJECTION
 @router.post(
     req_ep.compose_post_url("reject", pk="req_id", short=True),
     response=ResponseEnvelope[InboxRequestsOut],

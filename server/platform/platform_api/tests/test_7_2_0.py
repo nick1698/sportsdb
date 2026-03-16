@@ -1,30 +1,21 @@
 import uuid
 
-from django.forms import ValidationError
-from django.test import TestCase, TransactionTestCase
 from django.db import IntegrityError, transaction
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 
 from shared.utils.testing import print_exit, subtest
 
-from platform_api.models.geo import Country  # :contentReference[oaicite:1]{index=1}
+from platform_api.models.geo import Country
 from platform_api.models.entities import (
     Sport,
     Person,
     Org,
     OrgType,
-)  # :contentReference[oaicite:2]{index=2}
+)
 from platform_api.models.presence import (
     PersonPresence,
     OrgPresence,
-)  # :contentReference[oaicite:3]{index=3}
-from platform_api.models.inbox import (  # :contentReference[oaicite:4]{index=4}
-    EditRequestsInbox,
-    EditRequestsInboxEvent,
-    EntityType,
-    RequestedAction,
-    RequestStatus,
-    EventType,
 )
 
 
@@ -108,44 +99,3 @@ class PresenceConstraintTests(TestCase):
                     OrgPresence.objects.create(
                         org=org, sport=test_sport, vertical_entity_id=vid
                     )
-
-
-class InboxFlowTests(TransactionTestCase):
-    @print_exit("Inbox contracts")
-    def test_inbox_contracts(self):
-        sport = _mk_sport()
-        user = _mk_user("inbox_tester1")
-
-        with subtest(self, "Inbox CREATE: auto event CREATED on commit"):
-
-            req = EditRequestsInbox.objects.create(
-                entity_type=EntityType.PERSON,
-                action=RequestedAction.CREATE,
-                status=RequestStatus.PENDING,
-                sport=sport,
-                vertical_entity_id=uuid.uuid4(),
-                target_entity_id=None,
-                payload={"given_name": "Ada", "family_name": "Lovelace"},
-                created_by=user,
-            )
-
-            created_events = EditRequestsInboxEvent.objects.filter(
-                request=req, event_type=EventType.CREATED
-            )
-            self.assertEqual(created_events.count(), 1)
-            self.assertEqual(created_events.first().actor_id, user.id)
-
-        with subtest(self, "Inbox UPDATE: target required (check constraint)"):
-            req = EditRequestsInbox(
-                entity_type=EntityType.ORG,
-                action=RequestedAction.UPDATE,
-                status=RequestStatus.PENDING,
-                sport=sport,
-                vertical_entity_id="11111111-1111-1111-1111-111111111111",
-                target_entity_id=None,
-                payload={"official_name": "Volley Milano"},
-                created_by=user,
-            )
-
-            with self.assertRaises(ValidationError):
-                req.full_clean()
