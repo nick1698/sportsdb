@@ -588,21 +588,22 @@ _Deliverable_: state machine chiusa, coerente con workflow, audit fields e trans
 
 #### 7.3.3 — Service layer Inbox (dominio applicativo)
 
-- [ ] Creare service layer dedicato alla Inbox
-- [ ] Separare la logica dai router
-- [ ] Introdurre funzioni chiare per create / approve / reject / link / merge
-- [ ] Centralizzare validazioni, guardie e aggiornamenti di stato
-- [ ] Preparare la base per transazioni atomiche
+- [x] Creare service layer dedicato alla Inbox
+- [x] Separare la logica dai router
+- [x] Introdurre funzioni chiare per create / approve / reject / merge / apply
+- [x] Centralizzare validazioni, guardie e aggiornamenti di stato
+- [x] Preparare la base per transazioni atomiche
 
-Funzioni minime attese:
+##### Funzioni minime attese
 
-- `create_inbox_request(...)`
-- `approve_inbox_request(...)`
-- `reject_inbox_request(...)`
-- `cancel_inbox_request(...)` (se confermato)
-- eventuali helper interni per `link` e `merge`
+- `class InboxService`
+- `create_request(...)`
+- `reject_request(...)`
+- `approve_request(...)`
+- `merge_request(...)`
+- `apply_request(...)`
 
-Regole:
+##### Regole
 
 - i router non devono contenere logica di business
 - i service devono essere il punto unico delle transizioni
