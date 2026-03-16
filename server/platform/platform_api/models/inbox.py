@@ -1,8 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.db import models, transaction
-from django.db.models import Q
+from django.db import models
 from django.forms import ValidationError
 from django.utils import timezone
 
@@ -28,6 +27,7 @@ class RequestStatus(models.TextChoices):
     REJECTED = "rejected", "Rejected"
     DUPLICATE = "duplicate", "Duplicate"
     APPLIED = "applied", "Applied"
+    MERGED = "merged", "Merged"
 
 
 class EditRequestsInbox(GrowingTable):
@@ -50,6 +50,15 @@ class EditRequestsInbox(GrowingTable):
         blank=True,
         verbose_name="Core entity target id",
         help_text="NOTE: Only nullable for CREATE requests",
+    )
+    ref_request = models.ForeignKey(
+        "EditRequestsInbox",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        verbose_name="Referenced request id",
+        related_name="referenced_requests",
+        help_text="NOTE: not null with DUPLICATE and MERGED stati",
     )
 
     payload = models.JSONField(help_text="Content of the request")
@@ -165,6 +174,7 @@ class EditRequestsInbox(GrowingTable):
             models.Index(fields=["entity_type"], name="idx_inbox_entity_type"),
             models.Index(fields=["sport"], name="idx_inbox_sport"),
             models.Index(fields=["target_entity_id"], name="idx_inbox_target_entity"),
+            models.Index(fields=["ref_request_id"], name="idx_inbox_ref_request"),
             models.Index(fields=["ts_creation"], name="idx_inbox_created_at"),
             models.Index(
                 fields=["status", "entity_type", "ts_creation"],
@@ -194,6 +204,13 @@ class EditRequestsInbox(GrowingTable):
                     "For action='update' or 'merge', target_entity_id is required."
                 )
 
+        # ref_request_id deve essere [valorizzato] per DUPLICATE e MERGED
+        if self.status in {RequestStatus.DUPLICATE, RequestStatus.MERGED}:
+            if self.ref_request_id is None:
+                errors["ref_request_id"] = (
+                    "For duplicate or merged requests ref_request_id is required."
+                )
+
         # taken_in_charge_* devono essere [valorizzati] per stati > PENDING
         if self.status != RequestStatus.PENDING:
             if self.taken_in_charge_by is None or self.ts_taken_in_charge is None:
@@ -201,13 +218,13 @@ class EditRequestsInbox(GrowingTable):
                     "Non-pending requests must have taken_in_charge_by and ts_taken_in_charge."
                 )
 
-        # finalised_* devono essere [valorizzati] per APPLIED
-        if self.status == RequestStatus.APPLIED:
+        # finalised_* devono essere [valorizzati] per APPLIED o MERGED
+        if self.status in {RequestStatus.APPLIED, RequestStatus.MERGED}:
             if self.finalised_by is None or self.ts_finalised is None:
                 errors["finalised_by"] = (
                     "Applied requests must have finalised_by and ts_finalised."
                 )
-        # finalised_* devono essere [null] per stati < APPLIED
+        # finalised_* devono essere [null] per stati < APPLIED/MERGED
         else:
             if self.finalised_by is not None or self.ts_finalised is not None:
                 errors["finalised_by"] = (
@@ -241,6 +258,7 @@ class EventType(models.TextChoices):
     DUPLICATE = "duplicate", "Duplicate"
     APPROVED = "approved", "Approved"
     APPLIED = "applied", "Applied"
+    MERGED = "merged", "Merged"
 
 
 class EditRequestsInboxEvent(GrowingTable):

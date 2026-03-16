@@ -73,7 +73,10 @@ class InboxService:
 
     @staticmethod
     def reject_request(
-        request_id: UUID, reviewer: "User", notes: Optional[str] = ""
+        request_id: UUID,
+        reviewer: "User",
+        ref_request_id: UUID | None = None,
+        notes: Optional[str] = "",
     ) -> EditRequestsInbox:
         """
         Rejects a pending request in the Inbox.

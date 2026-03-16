@@ -31,6 +31,7 @@ class InboxRequestIn(Schema):
     sport: str  # vertical slug
     vertical_entity_id: UUID
     target_entity_id: Optional[UUID] = None  # only optional for CREATE event
+    ref_request_id: Optional[UUID]  # only used for Duplicate and Merge events
     payload: dict  # additional info
     notes: Optional[str]
 
@@ -73,6 +74,7 @@ def list_requests(request, params: ListQueryParams):
     }
 
 
+# CREATION
 @router.post(
     req_ep.compose_post_url("create", short=True),
     response=ResponseEnvelope[InboxRequestsOut],
