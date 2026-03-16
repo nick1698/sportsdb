@@ -1,8 +1,8 @@
 from http import HTTPStatus
-from typing import Any, Optional, List, Dict
+from typing import Any, Optional, List, Dict, Type, Union
 
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.http import JsonResponse, Http404
+from django.http import HttpRequest, JsonResponse, Http404
 
 from ninja import Schema, NinjaAPI
 from ninja.errors import ValidationError, HttpError
@@ -22,7 +22,7 @@ class ApiError:
     def __init__(
         self,
         status: HTTPStatus,
-        message: Optional[str],
+        message: Optional[str] = None,
         details: Optional[List[Dict[str, Any]]] = None,
         success: bool = False,
     ):
@@ -35,13 +35,13 @@ class ApiError:
         self.success = success
 
     def to_dict(self, request_id: str) -> ErrorEnvelope:
-        return {
-            "status": self.code,
-            "message": self.message,
-            "details": self.details,
-            "request_id": request_id,
-            "success": self.success,
-        }
+        return ErrorEnvelope(
+            status=self.code,
+            message=self.message,
+            details=self.details,
+            request_id=request_id,
+            success=self.success,
+        )
 
 
 class ApiErrorException(Exception):
@@ -61,16 +61,21 @@ class ApiErrorException(Exception):
 # region ERROR HANDLING FNs
 
 
-def _get_request_id_(request) -> str:
-    return getattr(request, "request_id", None) or request.META.get("HTTP_X_REQUEST_ID")
+def _get_request_id_(request: HttpRequest) -> str:
+    request_id = getattr(request, "request_id", None)
+    if request_id is not None:
+        return str(request_id)
+    return str(request.META.get("HTTP_X_REQUEST_ID", ""))
 
 
-def __handler_resp__(request, err) -> JsonResponse:
+def __handler_resp__(request: HttpRequest, err) -> JsonResponse:
     rid = _get_request_id_(request)
     return JsonResponse(err.to_dict(rid), status=err.status)
 
 
-def handle_validation_error(request, exc: ValidationError) -> JsonResponse:
+def handle_validation_error(
+    request: HttpRequest, exc: Union[ValidationError, Type[ValidationError]]
+) -> JsonResponse:
     details = []
     for e in exc.errors:
         loc = e.get("loc", [])
@@ -90,7 +95,9 @@ def handle_validation_error(request, exc: ValidationError) -> JsonResponse:
     return __handler_resp__(request, err)
 
 
-def handle_http_error(request, exc: HttpError) -> JsonResponse:
+def handle_http_error(
+    request: HttpRequest, exc: Union[HttpError, Type[HttpError]]
+) -> JsonResponse:
     req_code = int(getattr(exc, "status_code", 400))
 
     req_status = {
@@ -104,22 +111,31 @@ def handle_http_error(request, exc: HttpError) -> JsonResponse:
     return __handler_resp__(request, err)
 
 
-def handle_not_found(request, exc: Http404 | ObjectDoesNotExist) -> JsonResponse:
+def handle_not_found(
+    request: HttpRequest,
+    exc: Union[Http404 | ObjectDoesNotExist, Type[Http404 | ObjectDoesNotExist]],
+) -> JsonResponse:
     err = ApiError(status=HTTPStatus.NOT_FOUND)
     return __handler_resp__(request, err)
 
 
-def handle_permission_denied(request, exc: PermissionDenied) -> JsonResponse:
+def handle_permission_denied(
+    request: HttpRequest, exc: Union[PermissionDenied, Type[PermissionDenied]]
+) -> JsonResponse:
     err = ApiError(status=HTTPStatus.FORBIDDEN)
     return __handler_resp__(request, err)
 
 
-def handle_api_error(request, exc: ApiErrorException) -> JsonResponse:
+def handle_api_error(
+    request: HttpRequest, exc: Union[ApiErrorException, Type[ApiErrorException]]
+) -> JsonResponse:
     err = exc.error
     return __handler_resp__(request, err)
 
 
-def handle_unexpected_error(request, exc: Exception) -> JsonResponse:
+def handle_unexpected_error(
+    request: HttpRequest, exc: Union[Exception, Type[Exception]]
+) -> JsonResponse:
     """Generic error handler"""
     err = ApiError(status=HTTPStatus.INTERNAL_SERVER_ERROR)
     return __handler_resp__(request, err)

@@ -32,6 +32,7 @@ class InboxRequestIn(Schema):
     vertical_entity_id: UUID
     target_entity_id: UUID
     payload: dict  # additional info
+    notes: Optional[str]
 
     def validate_entity_type(self, value):
         if value not in EntityType.values:
