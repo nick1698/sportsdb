@@ -1,13 +1,16 @@
 from http import HTTPStatus
-from typing import Any, Optional, List, Dict, Type, Union
+from typing import Any, Callable, Optional, List, Dict, Type, TypeVar, Union
 
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError as DjangoValidationError
 from django.http import HttpRequest, JsonResponse, Http404
 
 from ninja import Schema, NinjaAPI
-from ninja.errors import ValidationError, HttpError
+from ninja.errors import ValidationError as NinjaValidationError, HttpError
 
 # region DEFS
+
+
+T = TypeVar("T", bound=Callable[..., Any])
 
 
 class ErrorEnvelope(Schema):
@@ -34,14 +37,14 @@ class ApiError:
         # TODO: ricavare dal error code?
         self.success = success
 
-    def to_dict(self, request_id: str) -> ErrorEnvelope:
-        return ErrorEnvelope(
-            status=self.code,
-            message=self.message,
-            details=self.details,
-            request_id=request_id,
-            success=self.success,
-        )
+    def to_dict(self, request_id: str) -> dict:
+        return {
+            "status": self.code,
+            "message": self.message,
+            "details": self.details,
+            "request_id": request_id,
+            "success": self.success,
+        }
 
 
 class ApiErrorException(Exception):
@@ -58,7 +61,7 @@ class ApiErrorException(Exception):
 
 # endregion
 
-# region ERROR HANDLING FNs
+# region ERROR HANDLERS
 
 
 def _get_request_id_(request: HttpRequest) -> str:
@@ -68,7 +71,7 @@ def _get_request_id_(request: HttpRequest) -> str:
     return str(request.META.get("HTTP_X_REQUEST_ID", ""))
 
 
-def __handler_resp__(request: HttpRequest, err) -> JsonResponse:
+def __handler_resp__(request: HttpRequest, err: ApiError) -> JsonResponse:
     rid = _get_request_id_(request)
     return JsonResponse(err.to_dict(rid), status=err.status)
 
@@ -141,17 +144,23 @@ def handle_unexpected_error(
     return __handler_resp__(request, err)
 
 
+HANDLERS = {
+    HttpError: handle_http_error,
+    ObjectDoesNotExist: handle_not_found,
+    PermissionDenied: handle_permission_denied,
+    DjangoValidationError: handle_validation_error,
+    NinjaValidationError: handle_validation_error,
+    Http404: handle_not_found,
+    ApiErrorException: handle_api_error,
+    Exception: handle_unexpected_error,
+}
+
+
 def build_api(*, title: str, version: str = "1.0") -> NinjaAPI:
     api = NinjaAPI(title=title, version=version)
 
-    # register in one place, once
-    api.add_exception_handler(ValidationError, handle_validation_error)
-    api.add_exception_handler(HttpError, handle_http_error)
-    api.add_exception_handler(Http404, handle_not_found)
-    api.add_exception_handler(ObjectDoesNotExist, handle_not_found)
-    api.add_exception_handler(PermissionDenied, handle_permission_denied)
-    api.add_exception_handler(ApiErrorException, handle_api_error)
-    api.add_exception_handler(Exception, handle_unexpected_error)
+    for exc, handler in HANDLERS.items():
+        api.add_exception_handler(exc, handler)
 
     return api
 
