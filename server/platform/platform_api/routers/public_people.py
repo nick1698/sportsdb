@@ -151,7 +151,7 @@ def list_org_presences(request, id: UUID, sport_key: str | None = None):
     qs = qs.order_by("sport_id", "vertical_entity_id")
     items = [
         PresenceOut(
-            sport_key=row.sport,
+            sport_key=row.sport.key,
             vertical_entity_id=row.vertical_entity_id,
         )
         for row in qs.order_by("sport_id", "vertical_entity_id")
@@ -244,7 +244,7 @@ def list_person_presences(request, id: UUID, sport_key: str | None = None):
     qs = qs.order_by("sport_id", "vertical_entity_id")
     items = [
         PresenceOut(
-            sport_key=row.sport,
+            sport_key=row.sport.key,
             vertical_entity_id=row.vertical_entity_id,
         )
         for row in qs.order_by("sport_id", "vertical_entity_id")
