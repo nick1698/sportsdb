@@ -10,10 +10,10 @@ create extension if not exists pgcrypto;
 create table
     confederation (
         id uuid primary key default gen_random_uuid (),
-        acronym varchar(32) not null,
+        acronym varchar(16) not null,
         name_local varchar(255) not null,
         name_en varchar(255),
-        founded_date date not null,
+        date_foundation date not null,
         website varchar(255),
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now ()
@@ -30,6 +30,7 @@ create table
         official_name varchar(255) not null,
         name_en varchar(255),
         founded_date date not null,
+        website varchar(255),
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now ()
     );
@@ -40,10 +41,11 @@ create table
 create table
     club (
         id uuid primary key, -- logical hard-ref to platform.org = not generated
-        acronym varchar(32) not null,
+        federation_id uuid not null references confederation (id),
+        acronym varchar(8) not null,
+        short_name varchar(64) not null,
         official_name varchar(255) not null,
-        short_name varchar(255) not null,
-        founded_date date not null,
+        founded_date date, -- only nullable for MVP
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now ()
     );
@@ -55,8 +57,8 @@ create table
     athlete (
         id uuid primary key, -- logical hard-ref to platform.person = not generated
         dominant_hand integer not null default 1, -- 1=right; 2=left; 3=ambi
-        primary_role varchar(32) not null,
-        secondary_role varchar(32),
+        primary_role varchar(32) not null, -- will be an enum
+        secondary_role varchar(32), -- will be an enum
         career_start_date date,
         date_retired date,
         jersey_nr_default integer,
@@ -98,13 +100,13 @@ create table
 create table
     athlete_national_team_presence (
         id uuid primary key default gen_random_uuid (),
-        athlete_person_id uuid not null references athlete (id),
+        athlete_id uuid not null references athlete (id),
         national_team_id uuid not null references national_team (id),
         first_callup_date date not null,
         last_callup_date date not null,
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now (),
-        constraint uq_athlete_national_team_presence unique (athlete_person_id, national_team_id),
+        constraint uq_athlete_national_team_presence unique (athlete_id, national_team_id),
         constraint ck_nt_presence_dates check (last_callup_date >= first_callup_date)
     );
 
@@ -117,7 +119,7 @@ create table
 create table
     athlete_club_contract (
         id uuid primary key default gen_random_uuid (),
-        athlete_person_id uuid not null references athlete (id),
+        athlete_id uuid not null references athlete (id),
         club_id uuid not null references club (id),
         date_from date,
         date_to date,
@@ -148,7 +150,7 @@ create table
         )
     );
 
-create index idx_athlete_club_contract_athlete on athlete_club_contract (athlete_person_id);
+create index idx_athlete_club_contract_athlete on athlete_club_contract (athlete_id);
 
 create index idx_athlete_club_contract_club on athlete_club_contract (club_id);
 

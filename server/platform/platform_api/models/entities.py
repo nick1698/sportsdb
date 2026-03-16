@@ -9,7 +9,9 @@ from .geo import Country, GeoPlace
 
 class Sport(GrowingTable):
     key = models.CharField(primary_key=True, max_length=64)  # immutable slug
-    name_en = models.CharField(max_length=128, verbose_name="name (eng)")  # display label (can evolve, key should not)
+    name_en = models.CharField(
+        max_length=128, verbose_name="name (eng)"
+    )  # display label (can evolve, key should not)
     description = models.TextField(
         null=True, blank=True, verbose_name="Brief description"
     )
@@ -121,6 +123,9 @@ class Person(GrowingTable):
         db_column="sporting_nationality_id",
         related_name="people_sporting_nat",
     )
+
+    wiki = models.URLField(max_length=256, null=True, blank=True)
+    ig = models.URLField(max_length=256, null=True, blank=True)
 
     class Meta:
         db_table = "person"

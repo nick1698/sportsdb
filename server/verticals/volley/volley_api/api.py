@@ -1,4 +1,4 @@
-from shared.api_contract.factory import build_api
+from shared.api_contract.errors import build_api
 
 api = build_api(title="Volley API")
 
