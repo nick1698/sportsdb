@@ -13,122 +13,150 @@ if TYPE_CHECKING:
 
 from platform_api.models.inbox import (
     EditRequestsInbox,
-    EntityType,
+    EditRequestsInboxEvent,
+    EventType,
     RequestStatus,
 )
 
 
 class InboxService:
     @staticmethod
-    def _apply_core_changes(request: EditRequestsInbox):
-        """
-        Applies changes to the core based on the request payload.
-
-        Args:
-            request: EditRequestsInbox object containing the payload and metadata.
-        """
-        entity_type = request.entity_type
-        payload = request.payload
-
-        match entity_type:
-            case EntityType.ORG.value:
-                from platform_api.models.entities import Org
-
-                Org(**payload).save()
-
-            case EntityType.PERSON.value:
-                from platform_api.models.entities import Person
-
-                Person(**payload).save()
-
-            case EntityType.LOCATION.value:
-                from platform_api.models.geo import GeoPlace
-
-                GeoPlace(**payload).save()
-
-            case EntityType.VENUE.value:
-                from platform_api.models.geo import Venue
-
-                Venue(**payload).save()
-
-    @staticmethod
     def create_request(payload: Dict, user: "User") -> EditRequestsInbox:
-        """
-        Creates a new request in the Inbox.
+        with transaction.atomic():
+            now = timezone.now()
 
-        Args:
-            payload: Dictionary containing request data (see InboxRequestIn schema)
-            user: User creating the request
+            new_request = EditRequestsInbox(
+                ts_creation=now,
+                status=RequestStatus.PENDING,
+                created_by=user,
+                **payload
+            )
+            new_request.save()
 
-        Returns:
-            EditRequestsInbox: The created request object
-        """
-        # Create the inbox request
-        new_request = EditRequestsInbox(
-            status=RequestStatus.PENDING, created_by=user, **payload
-        )
-        new_request.save()
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=now,
+                request=new_request,
+                event_type=EventType.CREATED,
+                actor=user,
+            )
 
         return new_request
 
     @staticmethod
     def reject_request(
-        request_id: UUID, reviewer: "User", notes: Optional[str] = ""
+        request_id: UUID,
+        reviewer: "User",
+        ref_request_id: UUID | None = None,
+        notes: Optional[str] = "",
     ) -> EditRequestsInbox:
-        """
-        Rejects a pending request in the Inbox.
+        with transaction.atomic():
+            req = EditRequestsInbox.objects.get(id=request_id)
+            now = timezone.now()
 
-        Args:
-            request_id: ID of the request to reject.
-            reviewer: User rejecting the request.
-            notes: Optional notes explaining the rejection.
+            if req.status != RequestStatus.PENDING:
+                raise ValidationError("Only 'pending' requests can be rejected")
 
-        Returns:
-            EditRequestsInbox: The updated request object.
+            req.status = (
+                RequestStatus.REJECTED if not ref_request_id else RequestStatus.DUPLICATE
+            )
+            req.ref_request_id = ref_request_id if RequestStatus.DUPLICATE else None
+            req.taken_in_charge_by = reviewer
+            req.ts_taken_in_charge = now
+            req.notes = notes
+            req.save()
 
-        Raises:
-            ValidationError: If the request is not in 'pending' status.
-        """
-        request = EditRequestsInbox.objects.get(id=request_id)
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=now,
+                request=req,
+                event_type=(
+                    EventType.REJECTED if not ref_request_id else EventType.DUPLICATE
+                ),
+                actor=reviewer,
+                description=f"Duplicated request: {ref_request_id}" if ref_request_id else ""
+            )
 
-        if request.status != RequestStatus.PENDING:
-            raise ValidationError("Only 'pending' requests can be rejected")
-
-        request.status = RequestStatus.REJECTED
-        request.taken_in_charge_by = reviewer
-        request.notes = notes
-        request.save()
-
-        return request
+        return req
 
     @staticmethod
-    def approve_request(request_id: int, reviewer: "User") -> EditRequestsInbox:
-        """
-        Approves a pending request in the Inbox.
-
-        Args:
-            request_id: ID of the request to approve.
-            reviewer: User approving the request.
-
-        Returns:
-            EditRequestsInbox: The updated request object.
-
-        Raises:
-            ValidationError: If the request is not in 'pending' status.
-        """
+    def approve_request(
+        request_id: UUID,
+        reviewer: "User",
+        notes: Optional[str] = "",
+    ) -> EditRequestsInbox:
         with transaction.atomic():
-            request = EditRequestsInbox.objects.select_for_update().get(id=request_id)
+            req = EditRequestsInbox.objects.get(id=request_id)
+            now = timezone.now()
 
-            if request.status != "pending":
+            if req.status != RequestStatus.PENDING:
                 raise ValidationError("Only 'pending' requests can be approved")
 
-            # Apply changes to the core (e.g., create/update core entities)
-            InboxService._apply_core_changes(request)
+            req.status = RequestStatus.APPROVED
+            req.taken_in_charge_by = reviewer
+            req.ts_taken_in_charge = now
+            req.notes = notes
+            req.save()
 
-            # Update request status
-            request.status = "approved"
-            request.taken_in_charge_by = reviewer
-            request.ts_taken_in_charge = timezone.now()
-            request.save()
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=now,
+                request=req,
+                event_type=EventType.APPROVED,
+                actor=reviewer,
+            )
 
-        return request
+        return req
+
+    @staticmethod
+    def merge_request(
+        request_id: UUID,
+        reviewer: "User",
+        ref_request_id: UUID,
+        notes: Optional[str] = "",
+    ) -> EditRequestsInbox:
+        with transaction.atomic():
+            req = EditRequestsInbox.objects.get(id=request_id)
+            now = timezone.now()
+
+            if req.status != RequestStatus.APPROVED:
+                raise ValidationError("Only 'approved' requests can be merged")
+
+            req.status = RequestStatus.MERGED
+            req.ref_request_id = ref_request_id
+            req.finalised_by = reviewer
+            req.ts_finalised = now
+            req.notes = notes
+            req.save()
+
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=now,
+                request=req,
+                event_type=EventType.MERGED,
+                actor=reviewer,
+                description=f"Merged to request: {ref_request_id}"
+            )
+
+        return req
+
+    @staticmethod
+    def set_request_applied(request_id: UUID, reviewer: "User") -> EditRequestsInbox:
+        with transaction.atomic():
+            req = EditRequestsInbox.objects.get(id=request_id)
+            now = timezone.now()
+
+            if req.status != RequestStatus.APPROVED:
+                raise ValidationError("Only 'approved' requests can be approved")
+
+            # TODO: how to apply the updates??? do it here or elsewhere?
+
+            req.status = RequestStatus.APPLIED
+            req.finalised_by = reviewer
+            req.ts_finalised = now
+            req.save()
+
+            EditRequestsInboxEvent.objects.create(
+                ts_creation=now,
+                request=req,
+                event_type=EventType.APPLIED,
+                actor=reviewer,
+            )
+
+        return req

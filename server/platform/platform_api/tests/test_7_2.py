@@ -449,8 +449,10 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
         self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.BAD_REQUEST)
 
         data = r.json()
-        self.assertIn("error", data)
-        self.assertIn("code", data["error"])
+        self.assertEqual(data["status"], 400)
+        self.assertFalse(data["success"])
+        self.assertIn("message", data)
+        self.assertIn("request_id", data)
 
     @print_exit("Person list invalid sex -> 422")
     def test_person_list_invalid_sex_returns_422(self):
@@ -460,8 +462,11 @@ class CoreEntitiesReadOnlyAPITests(TestCase):
         self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
         data = r.json()
-        self.assertIn("error", data)
-        self.assertIn("code", data["error"])
+        self.assertEqual(data["status"], 422)
+        self.assertFalse(data["success"])
+        self.assertIn("message", data)
+        self.assertIn("details", data)
+        self.assertIn("request_id", data)
 
 
 class CoreSearchReadOnlyAPITests(TestCase):
@@ -640,16 +645,22 @@ class CoreSearchReadOnlyAPITests(TestCase):
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
             data = r.json()
-            self.assertIn("error", data)
-            self.assertIn("code", data["error"])
+            self.assertEqual(data["status"], 422)
+            self.assertFalse(data["success"])
+            self.assertEqual(data["message"], "Validation error")
+            self.assertIn("details", data)
+            self.assertIn("request_id", data)
 
         with subtest(self, f"GET {self.person_ep.search_url}?q='' -> 422"):
             r = self.client.get(self.person_ep.search_url, {"q": ""})
             self.assertEqual(HTTPStatus(r.status_code), HTTPStatus.UNPROCESSABLE_ENTITY)
 
             data = r.json()
-            self.assertIn("error", data)
-            self.assertIn("code", data["error"])
+            self.assertEqual(data["status"], 422)
+            self.assertFalse(data["success"])
+            self.assertEqual(data["message"], "Validation error")
+            self.assertIn("details", data)
+            self.assertIn("request_id", data)
 
 
 class CorePresencesReadOnlyAPITests(TestCase):

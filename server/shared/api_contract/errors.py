@@ -1,13 +1,20 @@
 from http import HTTPStatus
-from typing import Any, Optional, List, Dict
+from typing import Any, Callable, Optional, List, Dict, Type, TypeVar, Union
 
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.http import JsonResponse, Http404
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    PermissionDenied,
+    ValidationError as DjangoValidationError,
+)
+from django.http import HttpRequest, JsonResponse, Http404
 
 from ninja import Schema, NinjaAPI
-from ninja.errors import ValidationError, HttpError
+from ninja.errors import ValidationError as NinjaValidationError, HttpError
 
 # region DEFS
+
+
+T = TypeVar("T", bound=Callable[..., Any])
 
 
 class ErrorEnvelope(Schema):
@@ -22,7 +29,7 @@ class ApiError:
     def __init__(
         self,
         status: HTTPStatus,
-        message: Optional[str],
+        message: Optional[str] = None,
         details: Optional[List[Dict[str, Any]]] = None,
         success: bool = False,
     ):
@@ -34,7 +41,7 @@ class ApiError:
         # TODO: ricavare dal error code?
         self.success = success
 
-    def to_dict(self, request_id: str) -> ErrorEnvelope:
+    def to_dict(self, request_id: str) -> dict:
         return {
             "status": self.code,
             "message": self.message,
@@ -56,31 +63,62 @@ class ApiErrorException(Exception):
         super().__init__(error.message)
 
 
+ValidationExc = Union[NinjaValidationError, DjangoValidationError]
+
 # endregion
 
-# region ERROR HANDLING FNs
+# region ERROR HANDLERS
 
 
-def _get_request_id_(request) -> str:
-    return getattr(request, "request_id", None) or request.META.get("HTTP_X_REQUEST_ID")
+def _get_request_id_(request: HttpRequest) -> str:
+    request_id = getattr(request, "request_id", None)
+    if request_id is not None:
+        return str(request_id)
+    return str(request.META.get("HTTP_X_REQUEST_ID", ""))
 
 
-def __handler_resp__(request, err) -> JsonResponse:
+def __handler_resp__(request: HttpRequest, err: ApiError) -> JsonResponse:
     rid = _get_request_id_(request)
     return JsonResponse(err.to_dict(rid), status=err.status)
 
 
-def handle_validation_error(request, exc: ValidationError) -> JsonResponse:
-    details = []
-    for e in exc.errors:
-        loc = e.get("loc", [])
-        details.append(
-            {
-                "field": ".".join(str(x) for x in loc if x is not None),
-                "issue": e.get("msg", "invalid"),
-                "type": e.get("type"),
-            }
-        )
+def handle_validation_error(
+    request: HttpRequest,
+    exc: ValidationExc,
+) -> JsonResponse:
+    details: list[dict[str, object]] = []
+
+    if isinstance(exc, NinjaValidationError):
+        for e in exc.errors:
+            loc = e.get("loc", [])
+            details.append(
+                {
+                    "field": ".".join(str(x) for x in loc if x is not None),
+                    "issue": e.get("msg", "invalid"),
+                    "type": e.get("type"),
+                }
+            )
+
+    elif isinstance(exc, DjangoValidationError):
+        if hasattr(exc, "message_dict"):
+            for field, messages in exc.message_dict.items():
+                for msg in messages:
+                    details.append(
+                        {
+                            "field": field,
+                            "issue": msg,
+                            "type": "invalid",
+                        }
+                    )
+        else:
+            for msg in exc.messages:
+                details.append(
+                    {
+                        "field": "",
+                        "issue": msg,
+                        "type": "invalid",
+                    }
+                )
 
     err = ApiError(
         status=HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -90,7 +128,9 @@ def handle_validation_error(request, exc: ValidationError) -> JsonResponse:
     return __handler_resp__(request, err)
 
 
-def handle_http_error(request, exc: HttpError) -> JsonResponse:
+def handle_http_error(
+    request: HttpRequest, exc: Union[HttpError, Type[HttpError]]
+) -> JsonResponse:
     req_code = int(getattr(exc, "status_code", 400))
 
     req_status = {
@@ -104,38 +144,53 @@ def handle_http_error(request, exc: HttpError) -> JsonResponse:
     return __handler_resp__(request, err)
 
 
-def handle_not_found(request, exc: Http404 | ObjectDoesNotExist) -> JsonResponse:
+def handle_not_found(
+    request: HttpRequest,
+    exc: Union[Http404 | ObjectDoesNotExist, Type[Http404 | ObjectDoesNotExist]],
+) -> JsonResponse:
     err = ApiError(status=HTTPStatus.NOT_FOUND)
     return __handler_resp__(request, err)
 
 
-def handle_permission_denied(request, exc: PermissionDenied) -> JsonResponse:
+def handle_permission_denied(
+    request: HttpRequest, exc: Union[PermissionDenied, Type[PermissionDenied]]
+) -> JsonResponse:
     err = ApiError(status=HTTPStatus.FORBIDDEN)
     return __handler_resp__(request, err)
 
 
-def handle_api_error(request, exc: ApiErrorException) -> JsonResponse:
+def handle_api_error(
+    request: HttpRequest, exc: Union[ApiErrorException, Type[ApiErrorException]]
+) -> JsonResponse:
     err = exc.error
     return __handler_resp__(request, err)
 
 
-def handle_unexpected_error(request, exc: Exception) -> JsonResponse:
+def handle_unexpected_error(
+    request: HttpRequest, exc: Union[Exception, Type[Exception]]
+) -> JsonResponse:
     """Generic error handler"""
     err = ApiError(status=HTTPStatus.INTERNAL_SERVER_ERROR)
     return __handler_resp__(request, err)
 
 
+HANDLERS = {
+    HttpError: handle_http_error,
+    ObjectDoesNotExist: handle_not_found,
+    PermissionDenied: handle_permission_denied,
+    DjangoValidationError: handle_validation_error,
+    NinjaValidationError: handle_validation_error,
+    Http404: handle_not_found,
+    ApiErrorException: handle_api_error,
+    Exception: handle_unexpected_error,
+}
+
+
 def build_api(*, title: str, version: str = "1.0") -> NinjaAPI:
     api = NinjaAPI(title=title, version=version)
 
-    # register in one place, once
-    api.add_exception_handler(ValidationError, handle_validation_error)
-    api.add_exception_handler(HttpError, handle_http_error)
-    api.add_exception_handler(Http404, handle_not_found)
-    api.add_exception_handler(ObjectDoesNotExist, handle_not_found)
-    api.add_exception_handler(PermissionDenied, handle_permission_denied)
-    api.add_exception_handler(ApiErrorException, handle_api_error)
-    api.add_exception_handler(Exception, handle_unexpected_error)
+    for exc, handler in HANDLERS.items():
+        api.add_exception_handler(exc, handler)
 
     return api
 

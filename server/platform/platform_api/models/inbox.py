@@ -1,8 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.db import models, transaction
-from django.db.models import Q
+from django.db import models
 from django.forms import ValidationError
 from django.utils import timezone
 
@@ -28,6 +27,7 @@ class RequestStatus(models.TextChoices):
     REJECTED = "rejected", "Rejected"
     DUPLICATE = "duplicate", "Duplicate"
     APPLIED = "applied", "Applied"
+    MERGED = "merged", "Merged"
 
 
 class EditRequestsInbox(GrowingTable):
@@ -50,6 +50,15 @@ class EditRequestsInbox(GrowingTable):
         blank=True,
         verbose_name="Core entity target id",
         help_text="NOTE: Only nullable for CREATE requests",
+    )
+    ref_request = models.ForeignKey(
+        "EditRequestsInbox",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        verbose_name="Referenced request id",
+        related_name="referenced_requests",
+        help_text="NOTE: not null with DUPLICATE and MERGED stati",
     )
 
     payload = models.JSONField(help_text="Content of the request")
@@ -93,78 +102,12 @@ class EditRequestsInbox(GrowingTable):
         db_table = "edit_requests_inbox"
         verbose_name = "edit request"
         verbose_name_plural = "edit requests inbox"
-        constraints = [
-            # 1) CREATE -> target_entity_id deve essere NULL
-            models.CheckConstraint(
-                name="ck_inbox_create_target_null",
-                condition=(
-                    ~Q(action=RequestedAction.CREATE.value)
-                    | Q(target_entity_id__isnull=True)
-                ),
-            ),
-            # 2) UPDATE e MERGE -> target_entity_id obbligatorio
-            models.CheckConstraint(
-                name="ck_inbox_noncreate_target_required",
-                condition=(
-                    Q(action=RequestedAction.CREATE.value)
-                    | Q(target_entity_id__isnull=False)
-                ),
-            ),
-            # 3.1) taken_in_charge_by e ts_taken_in_charge devono essere entrambi NULL oppure entrambi valorizzati
-            models.CheckConstraint(
-                name="ck_inbox_taken_fields_both_null_or_set",
-                condition=(
-                    (
-                        Q(taken_in_charge_by__isnull=True)
-                        & Q(ts_taken_in_charge__isnull=True)
-                    )
-                    | (
-                        Q(taken_in_charge_by__isnull=False)
-                        & Q(ts_taken_in_charge__isnull=False)
-                    )
-                ),
-            ),
-            # 3.2) taken_in_charge_by e ts_taken_in_charge devono essere entrambi NULL oppure entrambi valorizzati
-            models.CheckConstraint(
-                name="ck_inbox_nonpending_requires_taken_fields",
-                condition=(
-                    Q(status="pending")
-                    | (
-                        Q(taken_in_charge_by__isnull=False)
-                        & Q(ts_taken_in_charge__isnull=False)
-                    )
-                ),
-            ),
-            # 4) finalised_by e ts_finalised devono essere entrambi NULL oppure entrambi valorizzati
-            models.CheckConstraint(
-                name="ck_inbox_finalised_fields_both_null_or_set",
-                condition=(
-                    (Q(finalised_by__isnull=True) & Q(ts_finalised__isnull=True))
-                    | (Q(finalised_by__isnull=False) & Q(ts_finalised__isnull=False))
-                ),
-            ),
-            # 5.1) status = applied -> finalised_* obbligatori
-            models.CheckConstraint(
-                name="ck_inbox_applied_requires_finalised_fields",
-                condition=(
-                    ~Q(status=RequestStatus.APPLIED.value)
-                    | (Q(finalised_by__isnull=False) & Q(ts_finalised__isnull=False))
-                ),
-            ),
-            # 5.2) status != applied -> finalised_* devono essere NULL (coerente con la tua regola: obbligatori solo con applied)
-            models.CheckConstraint(
-                name="ck_inbox_nonapplied_finalised_fields_null",
-                condition=(
-                    Q(status=RequestStatus.APPLIED.value)
-                    | (Q(finalised_by__isnull=True) & Q(ts_finalised__isnull=True))
-                ),
-            ),
-        ]
         indexes = [
             models.Index(fields=["status"], name="idx_inbox_status"),
             models.Index(fields=["entity_type"], name="idx_inbox_entity_type"),
             models.Index(fields=["sport"], name="idx_inbox_sport"),
             models.Index(fields=["target_entity_id"], name="idx_inbox_target_entity"),
+            models.Index(fields=["ref_request_id"], name="idx_inbox_ref_request"),
             models.Index(fields=["ts_creation"], name="idx_inbox_created_at"),
             models.Index(
                 fields=["status", "entity_type", "ts_creation"],
@@ -194,6 +137,13 @@ class EditRequestsInbox(GrowingTable):
                     "For action='update' or 'merge', target_entity_id is required."
                 )
 
+        # ref_request_id deve essere [valorizzato] per DUPLICATE e MERGED
+        if self.status in {RequestStatus.DUPLICATE, RequestStatus.MERGED}:
+            if self.ref_request_id is None:
+                errors["ref_request_id"] = (
+                    "For duplicate or merged requests ref_request_id is required."
+                )
+
         # taken_in_charge_* devono essere [valorizzati] per stati > PENDING
         if self.status != RequestStatus.PENDING:
             if self.taken_in_charge_by is None or self.ts_taken_in_charge is None:
@@ -201,13 +151,13 @@ class EditRequestsInbox(GrowingTable):
                     "Non-pending requests must have taken_in_charge_by and ts_taken_in_charge."
                 )
 
-        # finalised_* devono essere [valorizzati] per APPLIED
-        if self.status == RequestStatus.APPLIED:
+        # finalised_* devono essere [valorizzati] per APPLIED o MERGED
+        if self.status in {RequestStatus.APPLIED, RequestStatus.MERGED}:
             if self.finalised_by is None or self.ts_finalised is None:
                 errors["finalised_by"] = (
                     "Applied requests must have finalised_by and ts_finalised."
                 )
-        # finalised_* devono essere [null] per stati < APPLIED
+        # finalised_* devono essere [null] per stati < APPLIED/MERGED
         else:
             if self.finalised_by is not None or self.ts_finalised is not None:
                 errors["finalised_by"] = (
@@ -230,22 +180,7 @@ class EditRequestsInbox(GrowingTable):
             self.ts_finalised = None
 
         self.full_clean()
-
-        is_new = self._state.adding
         super().save(*args, **kwargs)
-
-        def create_created_event():
-            t_str = self.ts_creation.isoformat(sep=" ", timespec="seconds")
-            EditRequestsInboxEvent.objects.create(
-                ts_creation=self.ts_creation,
-                request=self,
-                event_type=EventType.CREATED,
-                actor=self.created_by,
-                description=f"{t_str}: Edit request created by {self.created_by}"
-            )
-
-        if is_new:
-            transaction.on_commit(create_created_event)
 
 
 class EventType(models.TextChoices):
@@ -256,6 +191,7 @@ class EventType(models.TextChoices):
     DUPLICATE = "duplicate", "Duplicate"
     APPROVED = "approved", "Approved"
     APPLIED = "applied", "Applied"
+    MERGED = "merged", "Merged"
 
 
 class EditRequestsInboxEvent(GrowingTable):

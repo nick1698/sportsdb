@@ -32,7 +32,7 @@ class BaseRoute:
     # region CLASS HELPERS
 
     @staticmethod
-    def _build_path(*parts: str) -> str:
+    def _build_path(*parts: str | None) -> str:
         cleaned = [part.strip("/") for part in parts if part]
         return "/" + "/".join(cleaned)
 
@@ -49,7 +49,7 @@ class BaseRoute:
     @property
     def _router_prefix(self):
         """e.g. "/api/core" """
-        return self._build_path(self._router_prefix)
+        return self._build_path("api", self.config.router)
 
     @property
     def list_short_url(self):
@@ -128,15 +128,15 @@ class BaseRoute:
 
 def search_query_helper(params: str, query) -> ListEnvelope:
     # normalization
-    params = params.strip() if params else None
-    if not params:
-        return {
-            "items": [],
-            "total": 0,
-            "limit": 1,
-            "offset": 0,
-            "sort": None,
-        }
+    ps: str | None = params.strip() if params else None
+    if not ps:
+        return ListEnvelope(
+            items=[],
+            total=0,
+            limit=1,
+            offset=0,
+            sort=None,
+        )
 
     """
     `icontains`, then annotate with a numeric rank:
@@ -144,11 +144,11 @@ def search_query_helper(params: str, query) -> ListEnvelope:
         1 = startswith
         2 = contains
     """
-    items = list(query(params))
-    return {
-        "items": items,
-        "total": len(items),
-        "limit": max(len(items), 1),
-        "offset": 0,
-        "sort": None,
-    }
+    items = list(query(ps))
+    return ListEnvelope(
+        items=items,
+        total=len(items),
+        limit=max(len(items), 1),
+        offset=0,
+        sort=None,
+    )
