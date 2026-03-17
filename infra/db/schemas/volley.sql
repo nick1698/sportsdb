@@ -1,9 +1,7 @@
 -- =========================================================
 -- SPDB VOLLEY - FIRST MVP SCHEMA DRAFT
 -- =========================================================
-create extension if not exists pgcrypto;
 
--- for UUIDs
 -- ---------------------------------------------------------
 -- confederation
 -- ---------------------------------------------------------
@@ -64,16 +62,16 @@ create table
         jersey_nr_default integer,
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now (),
-        constraint ck_athlete_secondary_role_diff check (
+        constraint chk_athlete_secondary_role_diff check (
             secondary_role is null
             or secondary_role <> primary_role
         ),
-        constraint ck_athlete_retired_after_start check (
+        constraint chk_athlete_retired_after_start check (
             career_start_date is null
             or date_retired is null
             or date_retired >= career_start_date
         ),
-        constraint ck_athlete_jersey_nr_default check (
+        constraint chk_athlete_jersey_nr_default check (
             jersey_nr_default is null
             or jersey_nr_default > 0
         )
@@ -121,13 +119,13 @@ create table
         id uuid primary key default gen_random_uuid (),
         athlete_id uuid not null references athlete (id),
         club_id uuid not null references club (id),
-        date_from date,
-        date_to date,
         loan_from_club_id uuid references club (id),
-        end_reason varchar(32), -- enum for both athletes and staff
+        date_from date, -- only nullable for MVP
+        date_to date, -- only nullable for MVP
+        end_reason integer, -- enum for both athletes and staff
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now (),
-        constraint ck_athlete_club_contract_dates check (
+        constraint chk_ath_club_ctr__dates check (
             date_from is null
             or date_to is null
             or date_to >= date_from
@@ -136,23 +134,15 @@ create table
             loan_from_club_id is null
             or loan_from_club_id <> club_id
         ),
-        constraint ck_athlete_club_contract_end_reason check (
-            end_reason in (
-                'expired',
-                'transfer',
-                'released',
-                'mutual_termination',
-                'retired',
-                'other',
-                'unknown'
-            )
-            or end_reason is null
+        constraint chk_ath_club_ctr__ended check (
+            date_to is null
+            or end_reason >= 0
         )
     );
 
-create index idx_athlete_club_contract_athlete on athlete_club_contract (athlete_id);
+create index idx_ath_club_ctr__athlete on athlete_club_contract (athlete_id);
 
-create index idx_athlete_club_contract_club on athlete_club_contract (club_id);
+create index idx_ath_club_ctr__club on athlete_club_contract (club_id);
 
 -- ---------------------------------------------------------
 -- season
@@ -175,7 +165,7 @@ create table
     club_team (
         id uuid primary key default gen_random_uuid (),
         club_id uuid not null references club (id),
-        category varchar(64) not null,
+        category varchar(64) not null, -- First team, U23, etc. - will become an enum
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now (),
         constraint uq_club_team_club_category unique (club_id, category)
@@ -221,8 +211,8 @@ create table
 create table
     competition (
         id uuid primary key default gen_random_uuid (),
-        scope varchar(32) not null,
-        competition_type varchar(32) not null, -- national/international enum; will include "local" later?
+        scope varchar(32) not null, -- national/international enum; will include "local" later?
+        competition_type varchar(32) not null, -- enum
         organizer_id uuid not null,
         official_name varchar(255) not null,
         short_name varchar(255) not null,
@@ -281,7 +271,7 @@ create table
 -- ---------------------------------------------------------
 create table
     staff_member (
-        id uuid primary key,  -- logical hard-ref to platform.person
+        id uuid primary key, -- logical hard-ref to platform.person
         preferred_role varchar(64),
         ts_creation timestamptz not null default now (),
         ts_last_update timestamptz not null default now ()
