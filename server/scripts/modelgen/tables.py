@@ -136,16 +136,6 @@ class ConstrKind(Enum):
     CHK = "check"
 
 
-# @dataclass
-# class ConstraintType:
-#     kind: ConstrKind
-#     fields: list[str] = []
-
-#     def __init__(self, raw_type: str, fields: list[str]):
-#         self.kind = ConstrKind(raw_type)
-#         self.fields = fields
-
-
 """
 campo IS NULL                   ->  Q(campo__isnull=True)
 campo IS NOT NULL               ->  Q(campo__isnull=False)
@@ -172,6 +162,9 @@ class VertUnique(VertConstraint):
 
     def add_field(self, field: str):
         self.fields.append(field)
+
+    def __str__(self):
+        return f"models.UniqueConstraint(name='{self.name}', fields={self.fields})"
 
 
 class VertCheck(VertConstraint):
