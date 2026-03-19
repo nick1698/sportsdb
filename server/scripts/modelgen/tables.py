@@ -136,14 +136,14 @@ class ConstrKind(Enum):
     CHK = "check"
 
 
-@dataclass
-class ConstraintType:
-    kind: ConstrKind
-    fields: list[str] = []
+# @dataclass
+# class ConstraintType:
+#     kind: ConstrKind
+#     fields: list[str] = []
 
-    def __init__(self, raw_type: str, fields: list[str]):
-        self.kind = ConstrKind(raw_type)
-        self.fields = fields
+#     def __init__(self, raw_type: str, fields: list[str]):
+#         self.kind = ConstrKind(raw_type)
+#         self.fields = fields
 
 
 """
@@ -162,15 +162,24 @@ condizione1 AND condizione2     ->  Q(condizione1) & Q(condizione2)
 
 class VertConstraint:
     name: str
-    ctype: ConstraintType
-    fields: list[str] = []
 
-    def __init__(self, name: str, raw_type: str):
+    def __init__(self, name: str):
         self.name = name
-        self.ctype = ConstraintType(raw_type)
+
+
+class VertUnique(VertConstraint):
+    fields: list[str] = []
 
     def add_field(self, field: str):
         self.fields.append(field)
+
+
+class VertCheck(VertConstraint):
+    raw_condition: str = ""
+
+    def __init__(self, name: str, raw_condition: str):
+        super().__init__(name)
+        self.raw_condition = raw_condition
 
 
 class VertIndex:

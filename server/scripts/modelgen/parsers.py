@@ -1,9 +1,9 @@
-from typing import Generator
+from typing import Generator, Literal
 
 from sqlparse.sql import Identifier, Parenthesis
 from sqlparse.tokens import Keyword
 
-from .tables import VertEnum, VertTable, VertConstraint, VertField
+from .tables import VertCheck, VertEnum, VertTable, VertConstraint, VertField, VertUnique
 
 
 def parse_enum(name: str, content: Parenthesis) -> VertEnum:
@@ -16,10 +16,15 @@ def parse_enum(name: str, content: Parenthesis) -> VertEnum:
     return VertEnum(name, options.copy())
 
 
-def parse_constraint(name: str, ctype: str, raw_content: str) -> VertConstraint:
-    c = VertConstraint(name, ctype)
-    for field in (f.strip().lower() for f in raw_content.strip("()").split(",")):
-        c.add_field(field)
+def parse_constraint(name: str, ctype: Literal["unique", "check"], raw_content: str) -> VertConstraint:
+    raw_content = raw_content.strip("()").split(",")
+    match ctype:
+        case "unique":
+            c = VertUnique(name)
+            for field in (f.strip().lower() for f in raw_content):
+                c.add_field(field)
+        case "check":
+            c = VertCheck(name, raw_content)
     return c
 
 
