@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from scripts.modelgen import next_power_of_2, snake_to_camel
 
@@ -80,6 +80,7 @@ class VertField:
     nullable: bool = True
     default: Any = None
     fk: tuple[str, str] | None = None
+    unique: bool = False
 
     comments: dict[str, str] = {}
 
@@ -117,6 +118,8 @@ class VertField:
         if "references" in attributes:
             tmp = attributes.split("references")[1].strip().split()
             self.fk = (tmp[0], tmp[1].removeprefix("(").removesuffix(")"))
+        if "unique" in attributes:
+            self.unique = True
 
     def add_comment(self, comment: str):
         """
