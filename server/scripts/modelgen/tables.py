@@ -200,6 +200,8 @@ class VertTable:
     djtitle: str
     filename: str = "__init__"
     inherits: Literal["fixed", "growing"] = "growing"
+    verbose_name: Optional[str]
+    verbose_name_plural: Optional[str]
 
     fields: dict[str, VertField] = {}
     enums: dict[str, VertEnum] = {}
@@ -209,6 +211,8 @@ class VertTable:
     def __init__(self, name: str):
         self.title: str = name.lower()
         self.dj_title: str = snake_to_camel(name)
+        self.verbose_name = name.capitalize().replace("_", " ")
+        self.verbose_name_plural = f"{self.verbose_name}s"
 
     def read_comments(self, **comments):
         """Saving comments written in '[key]:[value]' style"""
