@@ -45,6 +45,9 @@ patch_settings_file() {
     /\"django_extensions\"/! {
       /^]$/i\    \"django_extensions\",
     }
+    /\"django.contrib.postgres\"/! {
+      /^]$/i\    \"django.contrib.postgres\",
+    }
   }" "$SETTINGS_FILE"
 
   sed -i "/^INSTALLED_APPS = \[/,/^]$/ {
