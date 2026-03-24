@@ -62,7 +62,7 @@ render_service_block() {
       DJANGO_SECRET_KEY: \${DJANGO_SECRET_KEY:-dev-insecure-secret-key}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      POSTGRES_USER: \${POSTGRES_USER:-spdb}
+      POSTGRES_USER: \${POSTGRES_USER:-spdb_app}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-spdb}
       PYTHONPATH: "/app"
     networks:
