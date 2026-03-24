@@ -16,6 +16,10 @@ COPY ./verticals/${VERTICAL} /app/backend
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+COPY ./shared/db_init.sh /app/db_init.sh
+RUN chmod +x /app/db_init.sh
+ENTRYPOINT ["/app/db_init.sh", "${VERTICAL}"]
+
 WORKDIR /app/backend
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
