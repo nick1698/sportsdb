@@ -23,8 +23,8 @@ services:
     container_name: spdb_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-spdb}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
+      POSTGRES_USER: spdb_bootstrap
+      POSTGRES_PASSWORD: spdb_bootstrap
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
