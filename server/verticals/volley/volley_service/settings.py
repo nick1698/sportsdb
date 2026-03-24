@@ -72,7 +72,7 @@ WSGI_APPLICATION = "volley_service.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "volley_db",
+        "NAME": "volley_w_db",
         "USER": os.getenv("POSTGRES_USER", "spdb"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "spdb"),
         "HOST": os.getenv("POSTGRES_HOST", "postgres"),
