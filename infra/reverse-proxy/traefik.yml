@@ -1,6 +1,6 @@
 # Dev config (no TLS): routing via Docker labels
 log:
-  level: INFO
+  level: DEBUG
 
 accessLog: {}
 

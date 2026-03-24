@@ -17,6 +17,10 @@ COPY ./verticals/${VERTICAL} /app/backend
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+COPY ./shared/db_init.sh /app/db_init.sh
+RUN chmod +x /app/db_init.sh
+ENTRYPOINT ["/app/db_init.sh", "${VERTICAL}"]
+
 WORKDIR /app/backend
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
@@ -63,7 +67,7 @@ render_service_block() {
       DJANGO_SECRET_KEY: \${DJANGO_SECRET_KEY:-dev-insecure-secret-key}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      POSTGRES_USER: \${POSTGRES_USER:-spdb}
+      POSTGRES_USER: \${POSTGRES_USER:-spdb_app}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-spdb}
       PYTHONPATH: "/app"
     networks:

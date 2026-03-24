@@ -17,9 +17,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'spdb_app') THEN
     CREATE ROLE spdb_app
       LOGIN
-      PASSWORD 'spdb_app'
+      PASSWORD 'spdb'
+      CREATEDB
       NOSUPERUSER
-      NOCREATEDB
       NOCREATEROLE;
   END IF;
 END $$;
