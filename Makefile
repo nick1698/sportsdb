@@ -55,7 +55,7 @@ logs:
 
 # Avvia anche i container "tooling" (adminer, ecc.)
 tools-up:
-	${COMPOSE} --profile tools up -d
+	${COMPOSE} start adminer
 
 tools-down:
 	${COMPOSE} stop adminer
@@ -89,7 +89,7 @@ test-code:
 
 # e.g.: mk test-ep EP=[health]
 test-ep:
-	curl -i -H "Host: platform.localtest.me" http://localhost/api/${EP}
+	curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/${EP}
 
 # e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:
