@@ -6,6 +6,8 @@ WHERE NOT EXISTS (
 -- list extensions here:
 \connect platform_db
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+GRANT ALL PRIVILEGES ON SCHEMA public TO spdb_app;
 
 \connect postgres
 GRANT CONNECT ON DATABASE platform_db TO spdb_app;
+GRANT ALL PRIVILEGES ON DATABASE platform_db TO spdb_app;

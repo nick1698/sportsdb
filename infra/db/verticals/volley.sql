@@ -7,6 +7,8 @@ WHERE NOT EXISTS (
 
 \connect volley_w_db
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+GRANT ALL PRIVILEGES ON SCHEMA public TO spdb_app;
 
 \connect postgres
-GRANT CONNECT ON DATABASE volley_db TO spdb_app;
+GRANT CONNECT ON DATABASE volley_w_db TO spdb_app;
+GRANT ALL PRIVILEGES ON DATABASE volley_w_db TO spdb_app;
