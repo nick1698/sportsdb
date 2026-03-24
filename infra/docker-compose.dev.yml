@@ -14,7 +14,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./reverse-proxy/traefik.yml:/etc/traefik/traefik.yml:ro"
     networks:
-      - spdb
+      spdb:
+        ipv4_address: 172.19.0.2
 
   postgres:
     build:
@@ -37,7 +38,8 @@ services:
       timeout: 3s
       retries: 20
     networks:
-      - spdb
+      spdb:
+        ipv4_address: 172.19.0.3
 
   adminer:
     image: adminer:4
@@ -48,7 +50,8 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - spdb
+      spdb:
+        ipv4_address: 172.19.0.4
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.adminer.rule=Host(`db.${DEV_DOMAIN}`)"
@@ -74,7 +77,8 @@ services:
       PLATFORM_DB: ${PLATFORM_DB:-platform_db}
       PYTHONPATH: /app
     networks:
-      - spdb
+      spdb:
+        ipv4_address: 172.19.0.5
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.platform-api.rule=Host(`platform.${DEV_DOMAIN}`)"
@@ -102,7 +106,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spdb}
       PYTHONPATH: /app
     networks:
-      - spdb
+      spdb:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.volley-api.rule=Host(`volley.${DEV_DOMAIN}`)"
@@ -115,6 +119,12 @@ services:
 networks:
   spdb:
     name: spdb_dev
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
+          ip_range: 172.19.0.128/25 # Range DHCP for dynamic IPs
 
 volumes:
   spdb_postgres_data:
