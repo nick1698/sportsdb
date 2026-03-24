@@ -76,7 +76,7 @@ DATABASES = {\\
     \"default\": {\\
         \"ENGINE\": \"django.db.backends.postgresql\",\\
         \"NAME\": \"${DB_NAME}\",\\
-        \"USER\": os.getenv(\"POSTGRES_USER\", \"spdb\"),\\
+        \"USER\": os.getenv(\"POSTGRES_USER\", \"spdb_app\"),\\
         \"PASSWORD\": os.getenv(\"POSTGRES_PASSWORD\", \"spdb\"),\\
         \"HOST\": os.getenv(\"POSTGRES_HOST\", \"postgres\"),\\
         \"PORT\": os.getenv(\"POSTGRES_PORT\", \"5432\"),\\

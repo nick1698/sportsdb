@@ -6,11 +6,12 @@ SVC ?= platform
 # endpoint
 EP ?= health
 
-.PHONY: help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations test-code test-ep create-vertical reset-db
+.PHONY: show help build up down down-v ps logs status tools-up tools-down enter manage makemigrations migrate showmigrations test-code test-ep create-vertical reset-db
 
 help:
 	@echo "Available commands:"
 	@echo "  mk help              - List all available commands"
+	@echo "  mk show              - Start 'lazydocker'"
 	@echo "  mk build             - Start the containers and rebuild images"
 	@echo "  mk up                - Start the containers"
 	@echo "  mk down              - Stop and remove the containers"
@@ -29,6 +30,9 @@ help:
 	@echo "  mk test-ep EP=...    - Endpoints testing"
 	@echo "  mk create-vertical   - Create a new vertical"
 	@echo "  mk reset-db SVC=...  - Fully reset the service database"
+
+show:
+	lazydocker
 
 build:
 	${COMPOSE} up -d --build ${ARGS}
@@ -51,7 +55,7 @@ logs:
 
 # Avvia anche i container "tooling" (adminer, ecc.)
 tools-up:
-	${COMPOSE} --profile tools up -d
+	${COMPOSE} start adminer
 
 tools-down:
 	${COMPOSE} stop adminer
@@ -85,7 +89,7 @@ test-code:
 
 # e.g.: mk test-ep EP=[health]
 test-ep:
-	curl -i -H "Host: platform.localtest.me" http://localhost/api/${EP}
+	curl -i -H "Host: platform.${DEV_DOMAIN}" http://localhost/api/${EP}
 
 # e.g.: mk create-vertical SVC=[new_vertical]
 create-vertical:
