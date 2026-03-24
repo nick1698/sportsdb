@@ -17,14 +17,39 @@ class FieldKind(Enum):
     DATERANGE = "daterange"
     URL = "url"
 
+    def djangofield(self):
+        match self.name:
+            case "UUID":
+                return "models.UUIDField"
+            case "INT":
+                return "models.IntegerField"
+            case "VARCHAR":
+                return "models.CharField"
+            case "TEXT":
+                return "models.TextField"
+            case "ENUM":
+                return "models.CharField"
+            case "TS":
+                return "models.DateTimeField"
+            case "DATE":
+                return "models.DateField"
+            case "NUMERIC":
+                return "models.DecimalField"
+            case "DATERANGE":
+                return "django.contrib.postgres.fields.DateRangeField"
+            case "URL":
+                return "models.URLField"
+            case _:
+                raise ValueError(f"Unsupported field type: {self.name}")
+
 
 @dataclass
 class SqlType:
     kind: FieldKind
     length: int | None = None  # e.g. varchar(255)
     enum_name: str | None = None  # e.g. postgres enum name
-    precision: int | None = None  # e.g. numeric(10,2)
-    scale: int | None = None  # e.g. numeric(10,2)
+    max_digits: int | None = None  # e.g. numeric(10,2)
+    decimals: int | None = None  # e.g. numeric(10,2)
 
     def __init__(self, kind: FieldKind, **params):
         self.kind = kind
@@ -36,7 +61,7 @@ class SqlType:
     def check_default(self, def_val: Any, enums: dict[str, "VertEnum"] | None = None):
         match self.kind:
             case FieldKind.UUID:
-                return "random" if def_val.startswith("gen_random_uuid") else None
+                return "uuid.uuid4" if def_val.startswith("gen_random_uuid") else None
             case FieldKind.INT:
                 return int(def_val) if def_val.isdigit() else None
             case FieldKind.VARCHAR | FieldKind.TEXT | FieldKind.URL:
@@ -71,6 +96,18 @@ class SqlType:
 
         return cls(kind, **params)
 
+    def format(self) -> dict[str, str]:
+        base = {"field": self.kind.djangofield()}
+        if self.length:
+            base["max_length"] = self.length
+        if self.enum_name:
+            base["choices"] = f"{self.enum_name}.choices"
+        if self.max_digits:
+            base["max_digits"] = self.max_digits
+        if self.decimals:
+            base["decimal_places"] = self.decimals
+        return base
+
 
 class VertField:
     name: str
@@ -79,7 +116,7 @@ class VertField:
     pk: bool = False
     nullable: bool = True
     default: Any = None
-    fk: tuple[str, str] | None = None
+    fk: tuple[str, str] | None = None  # (table, field)
     unique: bool = False
 
     comments: dict[str, str] = {}
@@ -132,6 +169,37 @@ class VertField:
         tmp: list[str] = comment.split(":")
         k: str = tmp[0].strip().lower() if len(tmp) > 1 else "help_text"
         self.comments[k] = tmp[1].strip() if len(tmp) > 1 else comment
+
+    def __str__(self):
+        ftype_params = self.ftype.format()
+        ftype = ftype_params.pop("field", "models.TextField")
+
+        base = f"{self.name} = {ftype}"
+
+        params = {}
+        for k, v in ftype_params.items():
+            params[k] = v
+        if self.pk:
+            params["primary_key"] = True
+        if self.nullable:
+            params["blank"] = True
+            params["null"] = True
+        if self.unique:
+            params["unique"] = True
+        if self.fk:
+            params[""] = self.fk[0]
+            params["on_delete"] = "models.CASCADE"
+            if self.fk[1] != "id":
+                params["to_field"] = self.fk[1]
+                params["db_column"] = f"{self.name}_{self.fk[1]}"
+        for k, v in self.comments.items():
+            params[k] = v
+
+        field_params = []
+        for p in params.items():
+            field_params.append("=".join(p))
+
+        return f"{base}({','.join(field_params)})\n"
 
 
 class ConstrKind(Enum):
@@ -238,3 +306,40 @@ class VertTable:
 
     def add_index(self, name: str, fields: list[str]):
         self.indexes[name] = VertIndex(name, fields)
+
+    def __str__(self):
+        pk = None
+        for field in self.fields.values():
+            if field.pk:
+                pk = field
+                break
+        if pk is None:
+            raise ValueError(f"No primary key defined for table '{self.title}'")
+
+        non_pk_fields = "    ".join(
+            str(f) for n, f in self.fields.items() if n != pk.name
+        )
+        constraints = (
+            "        ".join(str(c) for c in self.constraints.values())
+            if self.constraints
+            else ""
+        )
+        indexes = (
+            "        ".join(str(c) for c in self.indexes.values())
+            if self.indexes
+            else ""
+        )
+
+        return f"""
+class {self.dj_title}({self.inherits.capitalize()}Table):
+    {pk}
+    {non_pk_fields}
+
+    class Meta:
+        db_table = "{self.title}"
+        verbose_name = "{self.verbose_name.capitalize()}"
+        verbose_name_plural = "{self.verbose_name_plural.capitalize()}"
+        {f"constraints = [{constraints}]" if self.constraints else ""}
+        {f"indexes = [{indexes}]" if self.indexes else ""}
+
+"""

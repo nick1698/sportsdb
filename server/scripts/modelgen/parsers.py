@@ -1,22 +1,31 @@
 from typing import Generator, Literal
 
-from sqlparse.sql import Identifier, Parenthesis
+import sqlparse
+from sqlparse.sql import Function, Identifier, Parenthesis, Statement
 from sqlparse.tokens import Keyword
 
-from .tables import VertCheck, VertEnum, VertTable, VertConstraint, VertField, VertUnique
+from .tables import (
+    VertCheck,
+    VertEnum,
+    VertTable,
+    VertConstraint,
+    VertField,
+    VertUnique,
+)
 
 
-def parse_enum(name: str, content: Parenthesis) -> VertEnum:
+def parse_enum(name: str, content: Parenthesis, enums: dict):
     content = content.normalized.split("\n")
 
     options = (line.split("--") for line in content if len(line.strip()) > 1)
-    options: dict[str, str] = {
-        o[0].strip(" ',").upper(): o[1].strip() for o in options
-    }
-    return VertEnum(name, options.copy())
+    options: dict[str, str] = {o[0].strip(" ',").upper(): o[1].strip() for o in options}
+
+    enums[name] = VertEnum(name, options.copy())
 
 
-def parse_constraint(name: str, ctype: Literal["unique", "check"], raw_content: str) -> VertConstraint:
+def parse_constraint(
+    name: str, ctype: Literal["unique", "check"], raw_content: str
+) -> VertConstraint:
     raw_content = raw_content.strip("()").split(",")
     match ctype:
         case "unique":
@@ -28,9 +37,9 @@ def parse_constraint(name: str, ctype: Literal["unique", "check"], raw_content: 
     return c
 
 
-def parse_table(title: str, content: Parenthesis, enums: dict) -> VertTable:
-    table = VertTable(title)
-    table.add_enums(enums)
+def parse_table(title: str, content: Parenthesis, tables: dict, _enums_copy_: dict):
+    table: VertTable = VertTable(title)
+    table.add_enums(_enums_copy_)
 
     content = content.normalized.split("constraint")[0].split("\n")
 
@@ -62,4 +71,33 @@ def parse_table(title: str, content: Parenthesis, enums: dict) -> VertTable:
             parse_constraint(name.value, ctype.value, constraint.value)
         )
 
-    return table
+    tables[title] = table
+
+
+def parse_schema(schema, tables: dict, enums: dict):
+    schema: tuple[Statement] = sqlparse.parse(schema)
+
+    for statement in schema:
+        idx, _ = statement.token_next_by(t=Keyword.DDL)
+        _, obj = statement.token_next_by(idx=idx, t=Keyword)
+        _, name = statement.token_next_by(idx=idx, i=Identifier)
+        name: str = name.value
+
+        match obj.value:
+            case "type":
+                name = name.replace(" as enum", "")
+                enum_content: Parenthesis = statement.token_next_by(
+                    idx=idx, i=Parenthesis
+                )
+                parse_enum(name, enum_content, enums)
+            case "table":
+                table_content: Parenthesis = statement.token_next_by(
+                    idx=idx, i=Parenthesis
+                )
+                parse_table(name, table_content, tables, enums.copy())
+            case "index":
+                _, fn = statement.token_next_by(idx=idx, i=Function)
+                table_name: str = fn.value.split(" ")[0]
+                params: list[str] = [p.value for p in fn.get_parameters()]
+
+                tables[table_name].add_index(name, params)
