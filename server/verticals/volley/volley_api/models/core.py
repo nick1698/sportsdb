@@ -1,7 +1,8 @@
 import uuid
 
-from django.db import models
+from django.contrib.postgres import fields
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 from shared.utils.models import ContractEndReason, GrowingTable
 
@@ -17,16 +18,18 @@ class Club(GrowingTable):
     official_name = models.CharField(max_length=256)
 
     federation = models.ForeignKey(
-        "volley.federation",
+        "Federation",
         on_delete=models.PROTECT,
         db_column="federation_id",
         related_name="clubs",
     )
 
     date_foundation = models.DateField(
-        null=True, blank=True, help_text="Volley section foundation"
-    )  # NOTE: only nullable for MVP
-    # no website: see the Org website
+        null=True,
+        blank=True,
+        help_text="Volley section foundation - only nullable for MVP",
+    )
+    # website: see the platform.org website
 
     class Meta:
         db_table = "club"
@@ -37,17 +40,18 @@ class Club(GrowingTable):
 
 class ClubTeamCategories(models.TextChoices):
     FIRST = "FST", "First team"
-    U23 = "U23", "Under-23"
+    U22 = "U22", "Under-22"
     U21 = "U21", "Under-21"
     U20 = "U20", "Under-20"
     U19 = "U19", "Under-19"
+    U18 = "U18", "Under-18"
     U17 = "U17", "Under-17"
 
 
 class ClubTeam(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     club = models.ForeignKey(
-        "volley.club",
+        "Club",
         on_delete=models.CASCADE,
         db_column="club_id",
         related_name="teams",
@@ -71,13 +75,13 @@ class ClubTeam(GrowingTable):
 class ClubTeamSeason(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     club_team = models.ForeignKey(
-        "volley.club_team",
+        "ClubTeam",
         on_delete=models.CASCADE,
         db_column="club_team_id",
         related_name="seasons",
     )
     season = models.ForeignKey(
-        "volley.season",
+        "Season",
         on_delete=models.PROTECT,
         db_column="season_id",
         related_name="club_teams",
@@ -85,6 +89,7 @@ class ClubTeamSeason(GrowingTable):
 
     class Meta:
         db_table = "club_team_season"
+        verbose_name = "Club seasonal team"
         constraints = [
             models.UniqueConstraint(
                 name="unq_club_team_season",
@@ -124,8 +129,8 @@ class Athlete(GrowingTable):
     )
     # senior team debut date? when is a career starting?
     career_start_date = models.DateField(
-        blank=True, null=True
-    )  # TODO: only nullable for MVP
+        blank=True, null=True, help_text="only nullable for MVP"
+    )
     retirement_date = models.DateField(blank=True, null=True)
     jersey_nr_default = models.SmallIntegerField(
         blank=True,
@@ -161,26 +166,27 @@ class Athlete(GrowingTable):
 class AthleteClubContract(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     athlete = models.ForeignKey(
-        "volley.athlete",
+        "Athlete",
         on_delete=models.CASCADE,
         db_column="athlete_id",
         related_name="contracts_with_clubs",
     )
     club = models.ForeignKey(
-        "volley.club",
+        "Club",
         on_delete=models.CASCADE,
         db_column="club_id",
         related_name="contracts_with_athletes",
     )
 
-    date_from = models.DateField(blank=True, null=True)  # only nullable for MVP
-    date_to = models.DateField(blank=True, null=True)  # only nullable for MVP
+    duration = fields.DateRangeField(
+        blank=True, null=True, help_text="only nullable for MVP"
+    )
     end_reason = models.IntegerField(
         choices=ContractEndReason.choices, blank=True, null=True
     )
 
     loan_from_club = models.ForeignKey(
-        "volley.club",
+        "Club",
         on_delete=models.PROTECT,
         db_column="loan_from_club_id",
         related_name="loans",
@@ -194,24 +200,10 @@ class AthleteClubContract(GrowingTable):
         verbose_name = "Athlete-Club contract"
         constraints = [
             models.CheckConstraint(
-                name="chk_ath_club_ctr__dates",
-                condition=(
-                    models.Q(date_from__isnull=True)
-                    | models.Q(date_to__isnull=True)
-                    | models.Q(date_to__gte=models.F("date_from"))
-                ),
-            ),
-            models.CheckConstraint(
                 name="ck_ath_club_ctr__loan_from_diff",
                 condition=(
                     models.Q(loan_from_club_id__isnull=True)
                     | ~models.Q(loan_from_club=models.F("club"))
-                ),
-            ),
-            models.CheckConstraint(
-                name="chk_ath_club_ctr__ended",
-                condition=(
-                    models.Q(date_to__isnull=True) | models.Q(end_reason__gte=0)
                 ),
             ),
         ]
@@ -224,19 +216,22 @@ class AthleteClubContract(GrowingTable):
 class ClubTeamSeasonAthlete(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     athlete_club_contract = models.ForeignKey(
-        "volley.athlete_club_contract",
+        "AthleteClubContract",
         on_delete=models.CASCADE,
         db_column="athlete_club_contract_id",
         related_name="seasons",
     )
     club_team_season = models.ForeignKey(
-        "volley.club_team_season",
+        "ClubTeamSeason",
         on_delete=models.CASCADE,
         db_column="club_team_season_id",
         related_name="athletes",
     )
-    jersey_nr = models.IntegerField(  # only nullable for MVP
-        blank=True, null=True, validators=[MinValueValidator(0), MaxValueValidator[100]]
+    jersey_nr = models.IntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="only nullable for MVP",
     )
 
     class Meta:

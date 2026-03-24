@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.postgres import fields
 from django.db import models
 
 from shared.utils.models import FixedTable, GrowingTable
@@ -12,8 +13,8 @@ class Confederation(FixedTable):
     name_en = models.CharField(max_length=256, blank=True, null=True)
 
     date_foundation = models.DateField(
-        null=True, blank=True
-    )  # NOTE: only nullable for MVP
+        null=True, blank=True, help_text="only nullable for MVP"
+    )
     website = models.URLField(max_length=256, null=True, blank=True)
 
     class Meta:
@@ -32,15 +33,15 @@ class Federation(FixedTable):
     name_en = models.CharField(max_length=256, blank=True, null=True)
 
     confederation = models.ForeignKey(
-        "volley.confederation",
+        "Confederation",
         on_delete=models.PROTECT,
         db_column="confederation_id",
         related_name="federations",
     )
 
     date_foundation = models.DateField(
-        null=True, blank=True
-    )  # NOTE: only nullable for MVP
+        null=True, blank=True, help_text="only nullable for MVP"
+    )
     website = models.URLField(max_length=256, null=True, blank=True)
 
     class Meta:
@@ -52,21 +53,14 @@ class Federation(FixedTable):
 
 class Season(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    duration = fields.DateRangeField()
 
     class Meta:
         db_table = "season"
-        constraints = [
-            models.CheckConstraint(
-                name="chk_season__dates",
-                condition=(models.Q(end_date__gte=models.F("start_date"))),
-            ),
-        ]
 
     def __str__(self):
         # TODO: review this
-        return f"{self.start_date.year}-{self.end_date.year-2000}"
+        return f"{self.duration}-{self.end_date.year-2000}"
 
 
 # region COMPETITION
@@ -111,10 +105,6 @@ class Competition(GrowingTable):
     class Meta:
         db_table = "competition"
         constraints = [
-            # models.CheckConstraint(
-            #     name="chk_competition_scope",
-            #     condition=models.Q(scope__in=CompetitionScope.values),
-            # ),
             models.UniqueConstraint(
                 name="unq_competition_official_name",
                 fields=["organizer_id", "official_name"],
