@@ -18,8 +18,8 @@ BEGIN
     CREATE ROLE spdb_app
       LOGIN
       PASSWORD 'spdb'
+      CREATEDB
       NOSUPERUSER
-      NOCREATEDB
       NOCREATEROLE;
   END IF;
 END $$;
