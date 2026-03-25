@@ -6,3 +6,5 @@ ipython
 werkzeug
 mypy
 django-stubs
+flake8
+black
