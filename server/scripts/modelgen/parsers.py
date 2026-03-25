@@ -26,14 +26,14 @@ def parse_enum(name: str, content: Parenthesis, enums: dict):
 
 
 def parse_constraint(name: str, ctype: Literal["unique", "check"], raw_content: str) -> VertConstraint:
-    raw_content = raw_content.strip("()").split(",")
+    raw_content = raw_content.strip("(),\n ").split(",")
     match ctype:
         case "unique":
             c = VertUnique(name)
             for field in (f.strip().lower() for f in raw_content):
-                c.add_field(field)
+                c.add_field(field.strip("()"))
         case "check":
-            c = VertCheck(name, raw_content)
+            c = VertCheck(name, raw_content[0])
     return c
 
 
@@ -42,38 +42,25 @@ def parse_table(title: str, content: Parenthesis, tables: dict, _enums_copy_: di
     table.add_enums(_enums_copy_)
     print(f"\n{title.upper()}")
 
-    lines = content.normalized.split("constraint")[0].split("\n")
+    # dividing fields from constraints
+    tmp = content.normalized.split("constraint")
+
+    field_lines = tmp[0].split("\n")
 
     # read fields
-    fields = (
-        line
-        for line in (line.split("--")[0].strip().removesuffix(",") for line in lines)
-        if len(line) > 1
-    )
+    fields = (line for line in (line.split("--")[0].strip().removesuffix(",") for line in field_lines) if len(line) > 1)
     for line in fields:
         table.add_field(VertField(*line.split(" ", 2), enums=table.enums))
 
     # read comments
-    comment_lines: list[str] = [
-        c.split(":", 1)
-        for c in (
-            line.split("--")[1].strip()
-            for line in lines
-            if "--" in line and ":" in line
-        )
-    ]
+    comment_lines: list[str] = [c.split(":", 1) for c in (line.split("--")[1].strip() for line in field_lines if "--" in line and ":" in line)]
     comments: dict[str, str] = {c[0].strip().lower(): c[1].strip() for c in comment_lines}
     table.read_comments(**comments)
 
     # read constraints
-    for c in (t for t in content.tokens if t.match(Keyword, "constraint")):
-        idx = content.token_index(c)
-        _, name = content.token_next_by(idx=idx, i=Identifier)
-        _, ctype = content.token_next_by(idx=idx, t=Keyword)
-        _, constraint = content.token_next_by(idx=idx, i=Parenthesis)
-        table.add_constraint(
-            parse_constraint(name.value, ctype.value, constraint.value)
-        )
+    for c in tmp[1:]:
+        constr = c.strip().split(" ", 2)
+        table.add_constraint(parse_constraint(name=constr[0], ctype=constr[1], raw_content=constr[2]))
 
     tables[title] = copy.deepcopy(table)
 

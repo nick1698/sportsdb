@@ -7,7 +7,6 @@ from common import snake_to_camel
 from parsers import parse_schema
 from tables import VertEnum, VertTable
 
-
 IMPORTS = {
     "uuid": "import uuid",
     "postgres_fields": "from django.contrib.postgres import fields",
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     parse_schema(sql_schema, tables, enums)
 
     # write enums in their file
-    write("enums", "from django.db import models\n")
+    write("enums", "from django.db import models\n\n")
     for enum_name, enum in enums.items():
         write("enums", str(enum))
 

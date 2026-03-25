@@ -237,7 +237,7 @@ class VertField:
                 case "":
                     field_params.append(f"'{v}'")
                 case "help_text" | "related_name":
-                    field_params.append(f"{k}=\"{v}\"")
+                    field_params.append(f'{k}="{v}"')
                 case _:
                     field_params.append(f"{k}={v}")
 
@@ -247,20 +247,6 @@ class VertField:
 class ConstrKind(Enum):
     UNQ = "unique"
     CHK = "check"
-
-
-"""
-campo IS NULL                   ->  Q(campo__isnull=True)
-campo IS NOT NULL               ->  Q(campo__isnull=False)
-campo = valore                  ->  Q(campo=valore)
-campo <> valore                 ->  ~Q(campo=valore) o Q(~campo=valore)
-campo > valore                  ->  Q(campo__gt=valore)
-campo >= valore                 ->  Q(campo__gte=valore)
-campo1 = campo2                 ->  Q(campo1=F('campo2'))
-campo1 <> campo2                ->  ~Q(campo1=F('campo2'))
-condizione1 OR condizione2      ->  `Q(condizione1)
-condizione1 AND condizione2     ->  Q(condizione1) & Q(condizione2)
-"""
 
 
 class VertConstraint:
@@ -281,15 +267,69 @@ class VertUnique(VertConstraint):
         self.fields.append(field)
 
     def __str__(self):
-        return f"models.UniqueConstraint(name='{self.name}', fields={self.fields})"
+        return f"models.UniqueConstraint(name='{self.name}', fields={self.fields}),\n"
+
+
+"""
+campo IS NULL                   ->  Q(campo__isnull=True)
+campo IS NOT NULL               ->  Q(campo__isnull=False)
+campo = valore                  ->  Q(campo=valore)
+campo <> valore                 ->  ~Q(campo=valore)
+
+campo > valore                  ->  Q(campo__gt=valore)
+campo >= valore                 ->  Q(campo__gte=valore)
+campo < valore             -> Q(campo__lt=valore)
+campo <= valore            -> Q(campo__lte=valore)
+
+campo IN (...)             -> Q(campo__in=[...])
+campo BETWEEN a AND b      -> Q(campo__range=(a, b))
+
+campo1 = campo2                 ->  Q(campo1=F('campo2'))
+campo1 <> campo2                ->  ~Q(campo1=F('campo2'))
+campo1 > campo2            -> Q(campo1__gt=F("campo2"))
+
+cond1 OR cond2             -> Q(...) | Q(...)
+cond1 AND cond2            -> Q(...) & Q(...)
+NOT cond1                  -> ~Q(...)
+(cond1 OR cond2) AND cond3 -> (Q(...) | Q(...)) & Q(...)
+"""
 
 
 class VertCheck(VertConstraint):
-    raw_condition: str = ""
-
     def __init__(self, name: str, raw_condition: str):
         super().__init__(name)
-        self.raw_condition = raw_condition
+        self.exclusive_conditions = [c.strip() for c in raw_condition.replace("\n", "").strip("() ").split("or")]
+
+    @staticmethod
+    def format_condition(condition: str) -> str:
+        """DISCLAIMER: not all cases are being managed - just the ones requested until now"""
+        tokens = condition.strip("()").split(" ")
+        field = tokens[0]
+        comp_val = f"{tokens[2]}" if tokens[2].isdigit() else f"models.F('{tokens[2]}')"
+        match tokens[1]:
+            case "is":
+                if tokens[2] == "not":
+                    return f"models.Q({field}__isnull=False)"
+                else:
+                    return f"models.Q({field}__isnull=True)"
+            case "between":
+                return f"models.Q({field}__range=({tokens[2]}, {tokens[4]}))"
+            case "<>":
+                return f"~models.Q({field}={comp_val})"
+            case ">=":
+                return f"~models.Q({field}__gte={comp_val})"
+            case ">":
+                return f"~models.Q({field}__gt={comp_val})"
+            case "<=":
+                return f"~models.Q({field}__lte={comp_val})"
+            case "<":
+                return f"~models.Q({field}__lt={comp_val})"
+            case _:
+                raise Exception("This condition case is still not ready")
+
+    def __str__(self):
+        conditions = " | ".join((VertCheck.format_condition(c) for c in self.exclusive_conditions))
+        return f"models.CheckConstraint(name='{self.name}', condition=({conditions})),\n"
 
 
 class VertIndex:
@@ -298,7 +338,7 @@ class VertIndex:
         self.fields = fields
 
     def __str__(self):
-        return f"models.Index(name='{self.name}', fields={self.fields})"
+        return f"models.Index(name='{self.name}', fields={self.fields}),\n"
 
 
 class VertEnum:
@@ -387,18 +427,8 @@ class VertTable:
 
         non_pk_fields = "    ".join(str(f) for n, f in self.fields.items() if n != pk.name)
 
-        constraints = None
-        # constraints = (
-        #     "        ".join(str(c) for c in self.constraints.values())
-        #     if self.constraints
-        #     else ""
-        # )
-        indexes = None
-        # indexes = (
-        #     "        ".join(str(c) for c in self.indexes.values())
-        #     if self.indexes
-        #     else ""
-        # )
+        constraints = "        ".join(str(c) for c in self.constraints.values()) if self.constraints else ""
+        indexes = "        ".join(str(c) for c in self.indexes.values()) if self.indexes else ""
 
         return f"""
 class {self.dj_title}({table_kind}):
