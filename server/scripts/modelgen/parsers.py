@@ -4,7 +4,7 @@ import sqlparse
 from sqlparse.sql import Function, Identifier, Parenthesis, Statement
 from sqlparse.tokens import Keyword
 
-from .tables import (
+from tables import (
     VertCheck,
     VertEnum,
     VertTable,

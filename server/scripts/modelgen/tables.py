@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from scripts.modelgen import next_power_of_2, snake_to_camel
+from common import next_power_of_2, snake_to_camel
 
 
 class FieldKind(Enum):
