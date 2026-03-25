@@ -1,0 +1,30 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "Django SPDB apps"
+readme = "../docs/README.md"
+requires-python = ">=3.12"
+dependencies = [
+    Django>=5.0,<6.0
+    django-ninja>=1.1.0,<2.0
+    psycopg[binary]>=3.2,<4.0
+    django-extensions==3.2.3
+    ipython
+    werkzeug
+    mypy
+    django-stubs
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disable_error_code = ["var-annotated"]
+
+[[tool.mypy.overrides]]
+module = ["shared.utils.admin"]
+disable_error_code = ["misc"]
+
+[tool.black]
+line-length = 256
+target-version = ["py312"]
