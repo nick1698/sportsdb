@@ -1,4 +1,5 @@
-from typing import Generator, Literal
+import copy
+from typing import Literal
 
 import sqlparse
 from sqlparse.sql import Function, Identifier, Parenthesis, Statement
@@ -15,12 +16,13 @@ from tables import (
 
 
 def parse_enum(name: str, content: Parenthesis, enums: dict):
+    print(f"\n{name.upper()}")
     content = content.normalized.split("\n")
 
     options = (line.split("--") for line in content if len(line.strip()) > 1)
     options: dict[str, str] = {o[0].strip(" ',").upper(): o[1].strip() for o in options}
 
-    enums[name] = VertEnum(name, options.copy())
+    enums[name] = VertEnum(name, options)
 
 
 def parse_constraint(
@@ -40,22 +42,28 @@ def parse_constraint(
 def parse_table(title: str, content: Parenthesis, tables: dict, _enums_copy_: dict):
     table: VertTable = VertTable(title)
     table.add_enums(_enums_copy_)
+    print(f"\n{title.upper()}")
 
-    content = content.normalized.split("constraint")[0].split("\n")
+    lines = content.normalized.split("constraint")[0].split("\n")
 
     # read fields
     fields = (
-        line.split("--")[0].strip().removesuffix(",")
-        for line in content
-        if len(line.strip()) > 1
+        line
+        for line in (line.split("--")[0].strip().removesuffix(",") for line in lines)
+        if len(line) > 1
     )
     for line in fields:
         table.add_field(VertField(*line.split(" ", 2), enums=table.enums))
 
     # read comments
-    comment_lines: Generator[str] = (
-        line.split("--")[1].strip() for line in content if "--" in line and ":" in line
-    )
+    comment_lines: list[str] = [
+        c.split(":", 1)
+        for c in (
+            line.split("--")[1].strip()
+            for line in lines
+            if "--" in line and ":" in line
+        )
+    ]
     comments: dict[str, str] = {
         c[0].strip().lower(): c[1].strip() for c in comment_lines
     }
@@ -71,7 +79,7 @@ def parse_table(title: str, content: Parenthesis, tables: dict, _enums_copy_: di
             parse_constraint(name.value, ctype.value, constraint.value)
         )
 
-    tables[title] = table
+    tables[title] = copy.deepcopy(table)
 
 
 def parse_schema(schema, tables: dict, enums: dict):
@@ -83,17 +91,17 @@ def parse_schema(schema, tables: dict, enums: dict):
         _, name = statement.token_next_by(idx=idx, i=Identifier)
         name: str = name.value
 
-        match obj.value:
+        match obj.value.lower():
             case "type":
                 name = name.replace(" as enum", "")
                 enum_content: Parenthesis = statement.token_next_by(
                     idx=idx, i=Parenthesis
-                )
+                )[1]
                 parse_enum(name, enum_content, enums)
             case "table":
                 table_content: Parenthesis = statement.token_next_by(
                     idx=idx, i=Parenthesis
-                )
+                )[1]
                 parse_table(name, table_content, tables, enums.copy())
             case "index":
                 _, fn = statement.token_next_by(idx=idx, i=Function)

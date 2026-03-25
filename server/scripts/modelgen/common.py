@@ -1,6 +1,5 @@
 def snake_to_camel(name: str) -> str:
-    parts = name.split("_")
-    return parts[0] + "".join(word.capitalize() for word in parts[1:])
+    return "".join(word.capitalize() for word in name.split("_"))
 
 
 def next_power_of_2(n: int) -> int:
