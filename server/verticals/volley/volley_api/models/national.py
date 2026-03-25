@@ -7,9 +7,8 @@ from shared.utils.models import GrowingTable
 
 class NatTeamCategories(models.TextChoices):
     FIRST = "FST", "First team"
-    U23 = "U23", "Under-23"
+    U22 = "U22", "Under-22"
     U21 = "U21", "Under-21"
-    U20 = "U20", "Under-20"
     U19 = "U19", "Under-19"
     U17 = "U17", "Under-17"
 
@@ -17,7 +16,7 @@ class NatTeamCategories(models.TextChoices):
 class NatTeam(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     federation = models.ForeignKey(
-        "platform.federation",
+        "volley.federation",
         on_delete=models.CASCADE,
         db_column="federation_id",
         related_name="national_teams",
@@ -45,20 +44,20 @@ class NatTeam(GrowingTable):
 class AthleteNatPresence(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     athlete = models.ForeignKey(
-        "platform.athlete",
+        "volley.athlete",
         on_delete=models.CASCADE,
         db_column="athlete_id",
         related_name="called_for_national_team",
     )
     national_team = models.ForeignKey(
-        "platform.national_team",
+        "volley.national_team",
         on_delete=models.CASCADE,
         db_column="national_team_id",
         related_name="athletes_called",
     )
 
-    first_callup_date = models.DateField(blank=True, null=True)  # only nullable for MVP
-    last_callup_date = models.DateField(blank=True, null=True)  # only nullable for MVP
+    first_callup_date = models.DateField(blank=True, null=True, help_text="only nullable for MVP")
+    last_callup_date = models.DateField(blank=True, null=True, help_text="only nullable for MVP")
 
     class Meta:
         db_table = "athlete_national_team_presence"
