@@ -75,18 +75,12 @@ class SqlType:
                 return def_val if isinstance(def_val, str) else None
             case FieldKind.ENUM:
                 enum = enums[self.enum_name]
-                return (
-                    def_val
-                    if def_val.upper() in [o.upper() for o in enum.options.keys()]
-                    else None
-                )
+                return def_val if def_val.upper() in [o.upper() for o in enum.options.keys()] else None
             case _:
                 return None
 
     @classmethod
-    def resolve(
-        cls, raw: str, param: str | None = None, enums: dict | None = None
-    ) -> "SqlType":
+    def resolve(cls, raw: str, param: str | None = None, enums: dict | None = None) -> "SqlType":
         if enums and raw in enums:
             return cls(FieldKind.ENUM, enum_name=raw, imports=raw)
 
@@ -171,12 +165,7 @@ class VertField:
         if "not null" in attributes:
             self.nullable = False
         if "default" in attributes:
-            def_val = (
-                attributes.split("default", 1)[1]
-                .strip()
-                .split(" ")[0]
-                .removesuffix(",")
-            )
+            def_val = attributes.split("default", 1)[1].strip().split(" ")[0].removesuffix(",")
             self.default = self.ftype.check_default(def_val, enums)
             self.nullable = False
             if self.default == "uuid.uuid4":
@@ -396,9 +385,7 @@ class VertTable:
         if pk is None:
             raise ValueError(f"No primary key defined for table '{self.title}'")
 
-        non_pk_fields = "    ".join(
-            str(f) for n, f in self.fields.items() if n != pk.name
-        )
+        non_pk_fields = "    ".join(str(f) for n, f in self.fields.items() if n != pk.name)
 
         constraints = None
         # constraints = (

@@ -10,9 +10,7 @@ from shared.utils.models import ContractEndReason, GrowingTable
 
 
 class Club(GrowingTable):
-    id = models.UUIDField(
-        primary_key=True, help_text="Not generated: logical hard-ref to platform.org"
-    )
+    id = models.UUIDField(primary_key=True, help_text="Not generated: logical hard-ref to platform.org")
     acronym = models.CharField(max_length=8)
     short_name = models.CharField(max_length=64)
     official_name = models.CharField(max_length=256)
@@ -119,18 +117,12 @@ class PlayerRole(models.TextChoices):
 
 
 class Athlete(GrowingTable):
-    id = models.UUIDField(
-        primary_key=True, help_text="Not generated: logical hard-ref to platform.org"
-    )
+    id = models.UUIDField(primary_key=True, help_text="Not generated: logical hard-ref to platform.org")
     dominant_hand = models.SmallIntegerField(choices=Hand.choices, default=Hand.RIGHT)
     primary_role = models.CharField(max_length=4, choices=PlayerRole.choices)
-    secondary_role = models.CharField(
-        max_length=4, choices=PlayerRole.choices, blank=True, null=True
-    )
+    secondary_role = models.CharField(max_length=4, choices=PlayerRole.choices, blank=True, null=True)
     # senior team debut date? when is a career starting?
-    career_start_date = models.DateField(
-        blank=True, null=True, help_text="only nullable for MVP"
-    )
+    career_start_date = models.DateField(blank=True, null=True, help_text="only nullable for MVP")
     retirement_date = models.DateField(blank=True, null=True)
     jersey_nr_default = models.SmallIntegerField(
         blank=True,
@@ -144,18 +136,11 @@ class Athlete(GrowingTable):
         constraints = [
             models.CheckConstraint(
                 name="chk_athlete__secondary_role_diff",
-                condition=(
-                    models.Q(secondary_role__isnull=True)
-                    | ~models.Q(secondary_role=models.F("primary_role"))
-                ),
+                condition=(models.Q(secondary_role__isnull=True) | ~models.Q(secondary_role=models.F("primary_role"))),
             ),
             models.CheckConstraint(
                 name="chk_athlete__retired_after_start",
-                condition=(
-                    models.Q(career_start_date__isnull=True)
-                    | models.Q(retirement_date__isnull=True)
-                    | models.Q(retirement_date__gte=models.F("career_start_date"))
-                ),
+                condition=(models.Q(career_start_date__isnull=True) | models.Q(retirement_date__isnull=True) | models.Q(retirement_date__gte=models.F("career_start_date"))),
             ),
         ]
 
@@ -178,12 +163,8 @@ class AthleteClubContract(GrowingTable):
         related_name="contracts_with_athletes",
     )
 
-    duration = fields.DateRangeField(
-        blank=True, null=True, help_text="only nullable for MVP"
-    )
-    end_reason = models.IntegerField(
-        choices=ContractEndReason.choices, blank=True, null=True
-    )
+    duration = fields.DateRangeField(blank=True, null=True, help_text="only nullable for MVP")
+    end_reason = models.IntegerField(choices=ContractEndReason.choices, blank=True, null=True)
 
     loan_from_club = models.ForeignKey(
         "Club",
@@ -201,10 +182,7 @@ class AthleteClubContract(GrowingTable):
         constraints = [
             models.CheckConstraint(
                 name="ck_ath_club_ctr__loan_from_diff",
-                condition=(
-                    models.Q(loan_from_club_id__isnull=True)
-                    | ~models.Q(loan_from_club=models.F("club"))
-                ),
+                condition=(models.Q(loan_from_club_id__isnull=True) | ~models.Q(loan_from_club=models.F("club"))),
             ),
         ]
         indexes = [
@@ -243,9 +221,7 @@ class ClubTeamSeasonAthlete(GrowingTable):
             ),
             models.CheckConstraint(
                 name="chk_athlete_club_team_season__jersey_nr",
-                condition=(
-                    models.Q(jersey_nr__isnull=True) | models.Q(jersey_nr__gte=0)
-                ),
+                condition=(models.Q(jersey_nr__isnull=True) | models.Q(jersey_nr__gte=0)),
             ),
         ]
 

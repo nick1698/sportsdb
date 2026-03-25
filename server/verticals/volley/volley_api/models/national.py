@@ -22,9 +22,7 @@ class NatTeam(GrowingTable):
         related_name="national_teams",
     )
 
-    category = models.CharField(
-        max_length=3, choices=NatTeamCategories.choices, default=NatTeamCategories.FIRST
-    )
+    category = models.CharField(max_length=3, choices=NatTeamCategories.choices, default=NatTeamCategories.FIRST)
 
     class Meta:
         db_table = "national_team"
@@ -71,10 +69,6 @@ class AthleteNatPresence(GrowingTable):
             ),
             models.CheckConstraint(
                 name="chk_ath_nt_presence__dates",
-                condition=(
-                    models.Q(first_callup_date__isnull=True)
-                    | models.Q(last_callup_date__isnull=True)
-                    | models.Q(last_callup_date__gte=models.F("first_callup_date"))
-                ),
+                condition=(models.Q(first_callup_date__isnull=True) | models.Q(last_callup_date__isnull=True) | models.Q(last_callup_date__gte=models.F("first_callup_date"))),
             ),
         ]

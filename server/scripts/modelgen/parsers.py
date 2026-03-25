@@ -25,9 +25,7 @@ def parse_enum(name: str, content: Parenthesis, enums: dict):
     enums[name] = VertEnum(name, options)
 
 
-def parse_constraint(
-    name: str, ctype: Literal["unique", "check"], raw_content: str
-) -> VertConstraint:
+def parse_constraint(name: str, ctype: Literal["unique", "check"], raw_content: str) -> VertConstraint:
     raw_content = raw_content.strip("()").split(",")
     match ctype:
         case "unique":
@@ -64,9 +62,7 @@ def parse_table(title: str, content: Parenthesis, tables: dict, _enums_copy_: di
             if "--" in line and ":" in line
         )
     ]
-    comments: dict[str, str] = {
-        c[0].strip().lower(): c[1].strip() for c in comment_lines
-    }
+    comments: dict[str, str] = {c[0].strip().lower(): c[1].strip() for c in comment_lines}
     table.read_comments(**comments)
 
     # read constraints
@@ -94,14 +90,10 @@ def parse_schema(schema, tables: dict, enums: dict):
         match obj.value.lower():
             case "type":
                 name = name.replace(" as enum", "")
-                enum_content: Parenthesis = statement.token_next_by(
-                    idx=idx, i=Parenthesis
-                )[1]
+                enum_content: Parenthesis = statement.token_next_by(idx=idx, i=Parenthesis)[1]
                 parse_enum(name, enum_content, enums)
             case "table":
-                table_content: Parenthesis = statement.token_next_by(
-                    idx=idx, i=Parenthesis
-                )[1]
+                table_content: Parenthesis = statement.token_next_by(idx=idx, i=Parenthesis)[1]
                 parse_table(name, table_content, tables, enums.copy())
             case "index":
                 _, fn = statement.token_next_by(idx=idx, i=Function)

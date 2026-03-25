@@ -12,9 +12,7 @@ class Confederation(FixedTable):
     name_local = models.CharField(max_length=256)
     name_en = models.CharField(max_length=256, blank=True, null=True)
 
-    date_foundation = models.DateField(
-        null=True, blank=True, help_text="only nullable for MVP"
-    )
+    date_foundation = models.DateField(null=True, blank=True, help_text="only nullable for MVP")
     website = models.URLField(max_length=256, null=True, blank=True)
 
     class Meta:
@@ -25,9 +23,7 @@ class Confederation(FixedTable):
 
 
 class Federation(FixedTable):
-    id = models.UUIDField(
-        primary_key=True, help_text="Not generated: logical hard-ref to platform.org"
-    )
+    id = models.UUIDField(primary_key=True, help_text="Not generated: logical hard-ref to platform.org")
     acronym = models.CharField(max_length=16)
     official_name = models.CharField(max_length=256)
     name_en = models.CharField(max_length=256, blank=True, null=True)
@@ -39,9 +35,7 @@ class Federation(FixedTable):
         related_name="federations",
     )
 
-    date_foundation = models.DateField(
-        null=True, blank=True, help_text="only nullable for MVP"
-    )
+    date_foundation = models.DateField(null=True, blank=True, help_text="only nullable for MVP")
     website = models.URLField(max_length=256, null=True, blank=True)
 
     class Meta:
@@ -83,23 +77,15 @@ class CompetitionType(models.TextChoices):
 class Competition(GrowingTable):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    scope = models.SmallIntegerField(
-        choices=CompetitionScope.choices, default=CompetitionScope.NATIONAL
-    )
-    type = models.CharField(
-        max_length=4, choices=CompetitionType.choices, default=CompetitionType.LEAGUE
-    )
-    organizer_id = models.UUIDField(
-        help_text="No foreign key: logical hard-ref to a volley organizer"
-    )
+    scope = models.SmallIntegerField(choices=CompetitionScope.choices, default=CompetitionScope.NATIONAL)
+    type = models.CharField(max_length=4, choices=CompetitionType.choices, default=CompetitionType.LEAGUE)
+    organizer_id = models.UUIDField(help_text="No foreign key: logical hard-ref to a volley organizer")
 
     official_name = models.CharField(max_length=255)
     short_name = models.CharField(max_length=255)
     acronym = models.CharField(max_length=16, blank=True, null=True)
 
-    level = models.IntegerField(
-        help_text="from 1 to 99 = senior teams; from 100 to 199 = youth teams; from 200 = amateur teams"
-    )
+    level = models.IntegerField(help_text="from 1 to 99 = senior teams; from 100 to 199 = youth teams; from 200 = amateur teams")
     date_foundation = models.DateField(blank=True, null=True)  # only nullable per MVP
 
     class Meta:
