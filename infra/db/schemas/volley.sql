@@ -22,7 +22,7 @@ create table
     federation (
         -- file: governance
         -- inherits: fixed
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         confederation_id uuid not null references confederation (id),
         -- confederation_id: related_name: federations
@@ -39,7 +39,7 @@ create table
 create table
     club (
         -- file: clubs
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         federation_id uuid not null references federation (id),
         -- federation_id: related_name: clubs
@@ -52,13 +52,13 @@ create table
 
 create index idx_club__federation on club (federation_id);
 
-create type hand as enum(
+create type hand as enum (
     'R', -- RIGHT
     'L', -- LEFT
     'A', -- AMBI
 );
 
-create type player_role as enum(
+create type player_role as enum (
     'SET', -- SETTER
     'OH', -- OUTSIDE_HITTER
     'MB', -- MIDDLE_BLOCKER
@@ -71,7 +71,7 @@ create type player_role as enum(
 create table
     athlete (
         -- file: athletes
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         dominant_hand hand not null default 'R',
         primary_role player_role not null,
@@ -97,7 +97,7 @@ create table
         )
     );
 
-create type national_category as enum(
+create type national_category as enum (
     'FST', -- FIRST
     'U22', -- U22
     'U21', -- U21
@@ -138,7 +138,7 @@ create table
     );
 
 -- NOTE: released = fired
-create type contract_end_reason as enum(
+create type contract_end_reason as enum (
     'EXPIRED', -- EXPIRED
     'TRANSFER', -- TRANSFER
     'RELEASED', -- RELEASED
@@ -161,7 +161,7 @@ create table
         loan_from_club_id uuid references club (id),
         -- loan_from_club_id: related_name: loans
         -- loan_from_club_id: on_delete: models.PROTECT
-        -- loan_from_club_id: NOTE: if not null, the contract is a loan from this club
+        -- loan_from_club_id: NOTE - if not null, the contract is a loan from this club
         duration daterange null,
         -- duration: only nullable for MVP
         end_reason contract_end_reason,
@@ -184,7 +184,7 @@ create table
         duration daterange not null,
     );
 
-create type club_category as enum(
+create type club_category as enum (
     'FST', -- FIRST
     'U22', -- U22
     'U21', -- U21
@@ -241,7 +241,7 @@ create table
 create table
     league (
         -- file: governance
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         federation_id uuid not null references federation (id),
         -- federation_id: related_name: leagues
@@ -258,13 +258,13 @@ create index idx_league__federation on league (federation_id);
 
 -- competition
 -- NOTE: 'LOC' -- LOCAL can be added later
-create type competition_scope as enum(
+create type competition_scope as enum (
     'INT', -- INTERNATIONAL
     'NAT', -- NATIONAL
 );
 
 -- TODO: review this
-create type competition_type as enum(
+create type competition_type as enum (
     'champ', -- CHAMPIONSHIP
     'qual', -- QUALIFIERS
     'cup', -- CUP
@@ -279,18 +279,18 @@ create table
     competition (
         -- file: competitions
         id uuid primary key default gen_random_uuid (),
-        "scope" competition_scope not null,
+        scope competition_scope not null,
         organizer_id uuid not null,
         -- organizer_id: No foreign key - logical hard-ref to a volley organizer (confed or national league)
-        "level" integer not null,
+        level integer not null,
         -- level: from 1 to 99 = senior teams; from 100 to 199 = youth teams; from 200 = amateur teams
-        "type" competition_type not null,
+        type competition_type not null,
         official_name varchar(256) unique not null,
         short_name varchar(64) not null,
         acronym varchar(16) unique,
         date_foundation date null,
         -- date_foundation: only nullable for MVP
-        constraint unq_competition__level unique ("scope", organizer_id, "level"),
+        constraint unq_competition__level unique (scope, organizer_id, level),
     );
 
 -- competition_season
@@ -306,7 +306,7 @@ create table
     );
 
 -- competition_season_team_entry
-create type competition_phase as enum(
+create type competition_phase as enum (
     'regular', -- REGULAR_SEASON
     'playout', -- PLAYOUT
     'playoff', -- PLAYOFF
@@ -328,7 +328,7 @@ create table
     );
 
 -- staff_member
-CREATE TYPE staff_role AS ENUM(
+create type staff_role as enum (
     'head', -- HEAD_COACH
     'assist', -- ASSISTANT_COACH
     'tm', -- TEAM_MANAGER
@@ -352,7 +352,7 @@ CREATE TYPE staff_role AS ENUM(
 create table
     staff_member (
         -- file: staff
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         preferred_role staff_role not null default 'head',
     );
@@ -384,12 +384,8 @@ create table
         -- staff_club_contract_id: related_name: seasonal_team_contracts
         club_team_season_id uuid not null references club_team_season (id),
         -- staff_club_contract_id: related_name: seasonal_staff_contrascts
-        "role" staff_role not null,
-        constraint unq_club_team_season_staff_role unique (
-            staff_club_contract_id,
-            club_team_season_id,
-            "role"
-        )
+        role staff_role not null,
+        constraint unq_club_team_season_staff_role unique (staff_club_contract_id, club_team_season_id, role)
     );
 
 create index idx_team_staff__contract on club_team_season_staff_role (staff_club_contract_id);
@@ -423,11 +419,11 @@ create table
         -- staff_federation_contract_id: related_name: natioal_teams_roles
         national_team_id uuid not null references national_team (id),
         -- staff_federation_contract_id: related_name: federation_contracts
-        "role" staff_role not null,
+        role staff_role not null,
         constraint unq_national_team_staff_role unique (
             staff_federation_contract_id,
             national_team_id,
-            "role"
+            role
         )
     );
 
@@ -440,12 +436,11 @@ create index idx_national_team_staff__national_team on national_team_staff_role 
 create table
     executive (
         -- file: people
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
     );
 
-
-create type organisation_type as enum(
+create type organisation_type as enum (
     'confed', -- CONFEDERATION
     'fed', -- FEDERATION
     'lg', -- LEAGUE
@@ -453,7 +448,7 @@ create type organisation_type as enum(
     'club', -- CLUB
 );
 
-create type executive_role as enum(
+create type executive_role as enum (
     'pres', -- PRESIDENT
     'vicpres', -- VICE-PRESIDENT
     'gen_man', -- GENERAL MANAGER
@@ -478,20 +473,22 @@ create table
         duration daterange,
         end_reason contract_end_reason
     );
+
 create index idx_executive_contract__person on executive_org_contract (executive_person_id);
+
 create index idx_executive_contract__org on executive_org_contract (org_type, org_id);
 
 -- referee
 create table
     referee (
         -- file: people
-        id uuid primary key,
+        id uuid primary key not null,
         -- id: Not generated - logical hard-ref to platform.org
         federation_id uuid not null references federation (id),
         -- federation_id: related_name: referees
         license_level varchar(64),
         ref_category varchar(64),
-        career_start_date date null, 
+        career_start_date date null,
         -- career_start_date: only nullable for MVP
         date_retired date,
         constraint chk_referee_retired_after_start check (
@@ -500,4 +497,5 @@ create table
             or date_retired >= career_start_date
         )
     );
+
 create index idx_referee_federation on referee (federation_id);
